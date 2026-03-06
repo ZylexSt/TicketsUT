@@ -1,0 +1,404 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Administrador - Sistema de Tickets UTCJ</title>
+  <link rel="stylesheet" href="{% static 'css/administrador.css' %}" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="marca">
+        <div class="logo">🎫</div>
+        <div class="marca-texto">
+          <h1>Tickets UTCJ</h1>
+          <p>Panel Administrador</p>
+        </div>
+      </div>
+
+      <nav class="menu">
+        <a href="#" class="activo">🛡️ Administrador</a>
+        <a href="#">👥 Usuarios</a>
+        <a href="#">📋 Todos los Tickets</a>
+        <a href="#">🧾 Bitácora</a>
+        <a href="#">⚙️ Configuración</a>
+      </nav>
+
+      <div class="sidebar-pie">
+        <div class="caja-usuario">
+          <div class="avatar">AD</div>
+          <div class="usuario-info">
+            <strong>Administrador</strong>
+            <span>acceso total</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- HEADER -->
+    <header class="encabezado">
+      <div class="encabezado-izq">
+        <h2>Panel de Administración</h2>
+        <p>Gestión de usuarios y supervisión global del sistema.</p>
+      </div>
+      <div class="encabezado-der">
+        <a class="btn fantasma" href="{% url 'logout' %}">Cerrar sesión</a>
+        <button class="btn primario" type="button" onclick="abrirModal()">+ Nuevo usuario</button>
+      </div>
+    </header>
+
+    <!-- TARJETAS RESUMEN -->
+    <section class="resumen">
+      <article class="tarjeta">
+        <div class="tarjeta-titulo">Usuarios totales</div>
+        <div class="tarjeta-valor">{{ kpis.usuarios_totales }}</div>
+        <div class="tarjeta-nota">Cuentas activas</div>
+      </article>
+      <article class="tarjeta">
+        <div class="tarjeta-titulo">Técnicos</div>
+        <div class="tarjeta-valor">{{ kpis.tecnicos }}</div>
+        <div class="tarjeta-nota">En el sistema</div>
+      </article>
+      <article class="tarjeta">
+        <div class="tarjeta-titulo">Tickets hoy</div>
+        <div class="tarjeta-valor">{{ kpis.tickets_hoy }}</div>
+        <div class="tarjeta-nota">En todo el sistema</div>
+      </article>
+      <article class="tarjeta">
+        <div class="tarjeta-titulo">Sin resolver</div>
+        <div class="tarjeta-valor">{{ kpis.sin_resolver }}</div>
+        <div class="tarjeta-nota">Requieren atención</div>
+      </article>
+    </section>
+
+    <!-- SECCIÓN USUARIOS -->
+    <section class="seccion-usuarios">
+      <div class="barra-usuarios">
+        <div class="barra-izq">
+          <h3>Gestión de usuarios</h3>
+          <small>RF-04 · RF-05 · RF-06</small>
+        </div>
+
+        <form method="GET" class="barra-der">
+          <div class="campo-busqueda">
+            <input
+              type="text"
+              name="q_usuario"
+              value="{{ filtros.q_usuario }}"
+              placeholder="Buscar por nombre, correo o matrícula..." />
+          </div>
+
+          <div class="campo-select">
+            <select name="rol_usuario">
+              <option value="">Todos los roles</option>
+              <option value="USUARIO" {% if filtros.rol_usuario == "USUARIO" %}selected{% endif %}>Usuario</option>
+              <option value="TECNICO" {% if filtros.rol_usuario == "TECNICO" %}selected{% endif %}>Técnico</option>
+              <option value="ADMIN" {% if filtros.rol_usuario == "ADMIN" %}selected{% endif %}>Administrador</option>
+            </select>
+          </div>
+
+          <div class="campo-select">
+            <select name="estado_usuario">
+              <option value="">Estado</option>
+              <option value="ACTIVO" {% if filtros.estado_usuario == "ACTIVO" %}selected{% endif %}>Activo</option>
+              <option value="INACTIVO" {% if filtros.estado_usuario == "INACTIVO" %}selected{% endif %}>Inactivo</option>
+            </select>
+          </div>
+
+          <div class="filtros-acciones">
+            <a class="btn" href="{% url 'panel_admin' %}">Limpiar</a>
+            <button class="btn primario" type="submit">Aplicar</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="tabla-wrap">
+        <div class="tabla tabla-usuarios">
+          <div class="fila encabezado-tabla">
+            <div>Nombre</div>
+            <div>Correo / Matrícula</div>
+            <div>Rol</div>
+            <div>Estado</div>
+            <div>Último acceso</div>
+            <div>Acciones</div>
+          </div>
+
+          {% for u in usuarios %}
+          <div class="fila">
+            <div class="nombre-celda">
+              <div class="avatar-mini">{{ u.iniciales }}</div>
+              <span>{{ u.nombre }}</span>
+            </div>
+
+            <div class="mono">{{ u.identificador }}</div>
+
+            <div>
+              <span class="etiqueta {% if u.rol == 'TECNICO' %}rol-tecnico{% elif u.rol == 'ADMIN' %}rol-admin{% else %}rol-usuario{% endif %}">
+                {% if u.rol == "TECNICO" %}
+                  Técnico
+                {% elif u.rol == "ADMIN" %}
+                  Admin
+                {% else %}
+                  Usuario
+                {% endif %}
+              </span>
+            </div>
+
+            <div>
+              <span class="etiqueta {% if u.activo %}estado-activo{% else %}estado-inactivo{% endif %}">
+                {% if u.activo %}Activo{% else %}Inactivo{% endif %}
+              </span>
+            </div>
+
+            <div class="mono">{{ u.ultimo_acceso }}</div>
+
+            <div class="acciones-fila">
+              <button class="mini" type="button">Editar</button>
+              <button class="mini" type="button">Contraseña</button>
+
+              {% if u.activo %}
+                <form method="POST" action="{% url 'desactivar_usuario_admin' u.id %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button class="mini peligro" type="submit">Desactivar</button>
+                </form>
+              {% else %}
+                <form method="POST" action="{% url 'activar_usuario_admin' u.id %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button class="mini verde" type="submit">Activar</button>
+                </form>
+              {% endif %}
+            </div>
+            </div>
+          {% empty %}
+          <div class="fila">
+            <div style="grid-column: 1 / -1;" class="muted">
+              No hay usuarios registrados.
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN TODOS LOS TICKETS -->
+    <section class="seccion-tickets">
+      <div class="barra-tickets">
+        <div class="barra-izq">
+          <h3>Vista global de tickets</h3>
+          <small>RF-17 · Todos los tickets del sistema</small>
+        </div>
+      </div>
+
+    <form method="GET" class="filtros">
+      <div class="campo">
+        <label>Buscar</label>
+        <input type="text" name="q_ticket" value="{{ filtros.q_ticket }}" placeholder="Folio, activo, laboratorio..." />
+      </div>
+
+      <div class="campo">
+        <label>Laboratorio</label>
+        <select name="lab_ticket">
+          <option value="">Todos</option>
+          {% for lab in laboratorios_filtro %}
+            <option value="{{ lab.id }}" {% if filtros.lab_ticket == lab.id %}selected{% endif %}>{{ lab.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="campo">
+        <label>Categoría</label>
+        <select name="cat_ticket">
+          <option value="">Todas</option>
+          {% for cat in categorias_filtro %}
+            <option value="{{ cat.id }}" {% if filtros.cat_ticket == cat.id %}selected{% endif %}>{{ cat.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="campo">
+        <label>Estado</label>
+        <select name="estado_ticket">
+          <option value="">Todos</option>
+          <option value="NUEVO" {% if filtros.estado_ticket == "NUEVO" %}selected{% endif %}>Nuevo</option>
+          <option value="REVISION" {% if filtros.estado_ticket == "REVISION" %}selected{% endif %}>En revisión</option>
+          <option value="PROCESO" {% if filtros.estado_ticket == "PROCESO" %}selected{% endif %}>En proceso</option>
+          <option value="RESUELTO" {% if filtros.estado_ticket == "RESUELTO" %}selected{% endif %}>Resuelto</option>
+          <option value="CERRADO" {% if filtros.estado_ticket == "CERRADO" %}selected{% endif %}>Cerrado</option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label>Prioridad</label>
+        <select name="prioridad_ticket">
+          <option value="">Todas</option>
+          <option value="ALTA" {% if filtros.prioridad_ticket == "ALTA" %}selected{% endif %}>Alta</option>
+          <option value="MEDIA" {% if filtros.prioridad_ticket == "MEDIA" %}selected{% endif %}>Media</option>
+          <option value="BAJA" {% if filtros.prioridad_ticket == "BAJA" %}selected{% endif %}>Baja</option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label>Técnico asignado</label>
+        <select name="tecnico_ticket">
+          <option value="">Todos</option>
+          <option value="SIN_ASIGNAR" {% if filtros.tecnico_ticket == "SIN_ASIGNAR" %}selected{% endif %}>Sin asignar</option>
+          {% for tec in tecnicos_filtro %}
+            <option value="{{ tec.id }}" {% if filtros.tecnico_ticket == tec.id %}selected{% endif %}>{{ tec.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filtros-acciones">
+        <a class="btn" href="{% url 'panel_admin' %}">Limpiar</a>
+        <button class="btn primario" type="submit">Aplicar</button>
+      </div>
+    </form>
+
+      <div class="tabla-wrap">
+        <div class="tabla tickets-tabla tickets-admin-tabla">
+            <div class="fila encabezado-tabla">
+            <div>Folio</div>
+            <div>Laboratorio</div>
+            <div>Categoría</div>
+            <div>Activo</div>
+            <div>Descripción</div>
+            <div>Prioridad</div>
+            <div>Estado</div>
+            <div>Técnico</div>
+            <div>Últ. actualización</div>
+            <div>Acciones</div>
+          </div>
+
+          {% for t in tickets %}
+          <div class="fila">
+            <div class="mono">{{ t.folio }}</div>
+            <div>{{ t.laboratorio_nombre }}</div>
+            <div>{{ t.categoria_nombre }}</div>
+            <div class="mono">{{ t.activo }}</div>
+            <div>{{ t.descripcion }}</div>
+
+            <div>
+              <span class="etiqueta {% if t.prioridad == 'ALTA' %}prio-alta{% elif t.prioridad == 'MEDIA' %}prio-media{% else %}prio-baja{% endif %}">
+                {{ t.prioridad|title }}
+              </span>
+            </div>
+
+            <div>
+              <span class="etiqueta {% if t.estado == 'NUEVO' %}estado-nuevo{% elif t.estado == 'REVISION' %}estado-revision{% elif t.estado == 'PROCESO' %}estado-proceso{% else %}estado-resuelto{% endif %}">
+                {{ t.estado|title }}
+              </span>
+            </div>
+
+            <div>
+              {% if t.tecnico == "Sin asignar" %}
+                <span class="muted">Sin asignar</span>
+              {% else %}
+                {{ t.tecnico }}
+              {% endif %}
+            </div>
+
+            <div class="mono">{{ t.actualizado_en }}</div>
+
+            <div class="acciones-fila">
+              <button class="mini">Ver</button>
+              {% if t.tecnico == "Sin asignar" %}
+                <button class="mini">Asignar</button>
+              {% else %}
+                <button class="mini">Reasignar</button>
+              {% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <div class="fila">
+            <div style="grid-column: 1 / -1;" class="muted">
+              No hay tickets registrados.
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="pie">
+      <span class="muted">Sistema de Tickets UTCJ · Panel Administrador</span>
+      <span class="muted">© 2026</span>
+    </footer>
+  </div>
+
+  <!-- MODAL: NUEVO USUARIO -->
+  <div class="modal-fondo" id="modal" onclick="cerrarModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-encabezado">
+        <h3>Nuevo usuario</h3>
+        <button type="button" class="cerrar-modal" onclick="cerrarModal()">✕</button>
+      </div>
+
+      <form class="modal-form" method="POST" action="{% url 'crear_usuario_admin' %}">
+        {% csrf_token %}
+
+        <div class="campo-modal">
+          <label>Nombre completo</label>
+          <input type="text" name="nombre" placeholder="Ej. Juan García López" required />
+        </div>
+
+        <div class="campo-modal">
+          <label>Correo / Matrícula</label>
+          <input type="text" name="identificador" placeholder="usuario@utcj.edu.mx o matrícula" required />
+        </div>
+
+        <div class="campo-modal">
+          <label>Rol</label>
+          <select name="rol" required>
+            <option value="">Selecciona un rol</option>
+            <option value="USUARIO">Usuario</option>
+            <option value="TECNICO">Técnico</option>
+            <option value="ADMIN">Administrador</option>
+          </select>
+        </div>
+
+        <div class="campo-modal campo-password">
+          <label>Contraseña inicial</label>
+          <input type="password" id="inp-pass" name="contrasena" required />
+          <button type="button" class="btn-generar" onclick="generarPassword()">Generar automáticamente</button>
+        </div>
+
+        <div class="modal-acciones">
+          <button type="button" class="btn fantasma" onclick="cerrarModal()">Cancelar</button>
+          <button type="submit" class="btn primario">Crear usuario</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function abrirModal() {
+      const m = document.getElementById('modal');
+      if (m) m.classList.add('visible');
+    }
+
+    function cerrarModal(e) {
+      const m = document.getElementById('modal');
+      if (!m) return;
+      if (!e || e.target === m) {
+        m.classList.remove('visible');
+      }
+    }
+
+    function generarPassword() {
+      const inp = document.getElementById('inp-pass');
+      if (!inp) return;
+
+      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
+      let pass = '';
+      for (let i = 0; i < 10; i++) pass += chars[Math.floor(Math.random() * chars.length)];
+      inp.value = pass;
+      inp.type = 'text';
+    }
+  </script>
+</body>
+</html>

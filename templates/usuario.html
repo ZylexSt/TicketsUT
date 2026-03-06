@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block titulo %}Panel Usuario{% endblock %}
+{% block subtitulo_sidebar %}Panel Usuario{% endblock %}
+
+{% block menu %}
+<a href="{% url 'usuario' %}" class="activo">👤 Usuario</a>
+<a href="#" >📋 Mis tickets</a>
+<a href="#" >🧾 Bitácora</a>
+<a href="{% url 'logout' %}">🚪 Cerrar sesión</a>
+{% endblock %}
+
+{% block titulo_panel %}Panel de Usuario{% endblock %}
+{% block descripcion_panel %}Crea y revisa tus tickets.{% endblock %}
+
+{% block header_acciones %}
+<a class="btn fantasma" href="{% url 'logout' %}">Cerrar sesión</a>
+<button class="btn primario" type="button" onclick="abrirModal()">+ Nuevo ticket</button>
+{% endblock %}
+
+{% block contenido %}
+
+<section class="seccion-tickets">
+<div class="barra-tickets">
+    <div class="barra-izq">
+    <h3>Mis tickets</h3>
+    <small>RF-07 · RF-08 · RF-09</small>
+    </div>
+</div>
+
+<div class="tabla-wrap">
+    <div class="tabla tickets-tabla tickets-usuario-tabla">    
+        <div class="fila encabezado-tabla">
+        <div>Folio</div>
+        <div>Laboratorio</div>
+        <div>Categoría</div>
+        <div>Activo</div>
+        <div>Descripción</div>
+        <div>Prioridad</div>
+        <div>Estado</div>
+        <div>Últ. actualización</div>
+        <div>Acciones</div>
+    </div>
+
+    {% if tickets %}
+        {% for t in tickets %}
+        <div class="fila">
+            <div class="mono">{{ t.folio }}</div>
+            <div>{{ t.laboratorio_nombre }}</div>
+            <div>{{ t.categoria_nombre }}</div>
+            <div class="mono">{{ t.activo }}</div>
+            <div>{{ t.descripcion }}</div>
+
+            <div>
+            <span class="etiqueta {% if t.prioridad == 'ALTA' %}prio-alta{% elif t.prioridad == 'MEDIA' %}prio-media{% else %}prio-baja{% endif %}">
+                {{ t.prioridad|title }}
+            </span>
+            </div>
+
+            <div>
+            <span class="etiqueta
+                {% if t.estado == 'NUEVO' %}estado-nuevo
+                {% elif t.estado == 'REVISION' %}estado-revision
+                {% elif t.estado == 'PROCESO' %}estado-proceso
+                {% elif t.estado == 'RESUELTO' %}estado-resuelto
+                {% else %}estado-resuelto{% endif %}">
+                {{ t.estado|title }}
+            </span>
+            </div>
+
+            <div class="mono">{{ t.actualizado_en }}</div>
+            <div class="acciones-fila">
+            <a class="mini" href="#">Ver</a>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="fila">
+        <div style="grid-column: 1 / -1;" class="muted">
+            Aún no tienes tickets. Crea el primero con “+ Nuevo ticket”.
+        </div>
+        </div>
+    {% endif %}
+    </div>
+</div>
+</section>
+
+<!-- MODAL: NUEVO TICKET -->
+<div class="modal-fondo" id="modal" onclick="cerrarModal(event)">
+<div class="modal" onclick="event.stopPropagation()">
+
+    <div class="modal-encabezado">
+    <h3>Nuevo ticket</h3>
+    <button type="button" class="cerrar-modal" onclick="cerrarModal()">✕</button>
+    </div>
+
+    <form class="modal-form" method="POST" action="{% url 'crear_ticket_usuario' %}" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="campo-modal">
+    <label>Laboratorio</label>
+        <select name="laboratorio_id" required>
+        <option value="">Selecciona...</option>
+        {% for lab in laboratorios %}
+            <option value="{{ lab.id }}">{{ lab.nombre }}</option>
+        {% endfor %}
+        </select>
+    </div>
+
+    <div class="campo-modal">
+        <label>Categoría</label>
+        <select name="categoria_id" required>
+        <option value="">Selecciona...</option>
+        {% for c in categorias %}
+            <option value="{{ c.id }}">{{ c.nombre }}</option>
+        {% endfor %}
+        </select>
+    </div>
+
+    <div class="campo-modal">
+        <label>Activo</label>
+        <input type="text" name="activo" placeholder="Ej. PC-LAB2-07" required />
+    </div>
+
+    <div class="campo-modal">
+        <label>Prioridad</label>
+        <select name="prioridad" required>
+        <option value="BAJA">Baja</option>
+        <option value="MEDIA" selected>Media</option>
+        <option value="ALTA">Alta</option>
+        </select>
+    </div>
+
+    <div class="campo-modal">
+        <label>Descripción</label>
+        <input type="text" name="descripcion" placeholder="Describe el problema..." required />
+    </div>
+
+    <div class="campo-modal">
+        <label>Evidencia (opcional)</label>
+        <input type="file" name="evidencia" />
+    </div>
+
+    <div class="modal-acciones">
+        <button type="button" class="btn fantasma" onclick="cerrarModal()">Cancelar</button>
+        <button type="submit" class="btn primario">Crear ticket</button>
+    </div>
+    </form>
+</div>
+</div>
+
+<script>
+function abrirModal(){ document.getElementById('modal')?.classList.add('visible'); }
+function cerrarModal(e){
+    const m = document.getElementById('modal');
+    if (!m) return;
+    if (!e || e.target === m) m.classList.remove('visible');
+}
+</script>
+
+{% endblock %}

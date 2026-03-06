@@ -1,0 +1,11 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      MONGO_URI: "mongodb+srv://ticketsut:TicketsUT@cluster0.fwdpvdj.mongodb.net/?appName=Cluster0"
+      MONGO_BD: "tickets_utcj"
+      DJANGO_DEBUG: "1"
+    volumes:
+      - .:/app

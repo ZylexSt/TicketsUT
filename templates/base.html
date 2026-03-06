@@ -1,0 +1,80 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{% block titulo %}Sistema Tickets UTCJ{% endblock %}</title>
+
+<!-- Por ahora reutilizamos tu CSS -->
+<link rel="stylesheet" href="{% static 'css/administrador.css' %}" />
+</head>
+
+<body>
+<div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+    <div class="marca">
+        <div class="logo">🎫</div>
+        <div class="marca-texto">
+        <h1>Tickets UTCJ</h1>
+        <p>{% block subtitulo_sidebar %}Panel{% endblock %}</p>
+        </div>
+    </div>
+
+    <nav class="menu">
+        {% block menu %}
+        <a href="#" class="activo">Panel</a>
+        {% endblock %}
+    </nav>
+
+    <div class="sidebar-pie">
+        <div class="caja-usuario">
+        <div class="avatar">
+            {{ request.session.rol|default:"US"|slice:":2" }}
+        </div>
+        <div class="usuario-info">
+            <strong>{{ request.session.rol|default:"USUARIO" }}</strong>
+            <span>sesión activa</span>
+        </div>
+        </div>
+    </div>
+    </aside>
+
+    <!-- HEADER -->
+    <header class="encabezado">
+    <div class="encabezado-izq">
+        <h2>{% block titulo_panel %}Panel{% endblock %}</h2>
+        <p>{% block descripcion_panel %}{% endblock %}</p>
+    </div>
+    <div class="encabezado-der">
+        {% block header_acciones %}
+        <a class="btn fantasma" href="{% url 'logout' %}">Cerrar sesión</a>
+        {% endblock %}
+    </div>
+    </header>
+
+    <!-- MENSAJES (Django messages) -->
+    {% if messages %}
+    <section style="padding: 0 2rem;">
+        {% for message in messages %}
+        <div style="margin: .5rem 0; padding: .75rem 1rem; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff;">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    <!-- CONTENIDO -->
+    {% block contenido %}{% endblock %}
+
+    <!-- FOOTER -->
+    <footer class="pie">
+    <span class="muted">Sistema de Tickets UTCJ</span>
+    <span class="muted">© 2026</span>
+    </footer>
+
+</div>
+</body>
+</html>
