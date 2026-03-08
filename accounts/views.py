@@ -18,7 +18,6 @@ from .seguridad import verificar_contrasena, crear_hash_contrasena
 def vista_login(request):
     # GET
     if request.method == "GET":
-        # Si ya hay sesión, manda directo al panel
         if request.session.get("usuario_id"):
             rol = request.session.get("rol", "USUARIO")
             if rol == "ADMIN":
@@ -30,43 +29,63 @@ def vista_login(request):
         return render(request, "login.html")
 
     # POST
-    identificador = request.POST.get("correo", "").strip().lower()
+    correo = request.POST.get("correo", "").strip().lower()
     contrasena = request.POST.get("password", "").strip()
+    recordar = request.POST.get("recordar")
 
-    if not identificador or not contrasena:
-        messages.error(request, "Debes ingresar correo y contraseña.")
+    if not correo or not contrasena:
+        messages.error(request, "Debes ingresar tu correo institucional y tu contraseña.")
+        return render(request, "login.html")
+
+    # Validación: solo correos UTCJ
+    if not correo.endswith("@utcj.edu.mx"):
+        messages.error(request, "Acceso exclusivo para personal UTCJ. Usa tu correo institucional.")
         return render(request, "login.html")
 
     bd = obtener_bd()
 
     usuario = bd.usuarios.find_one({
-        "$or": [
-            {"perfil.correo": identificador},
-            {"perfil.matricula": identificador},
-        ]
+        "perfil.correo": correo
     })
 
     if not usuario:
-        messages.error(request, "Credenciales inválidas.")
+        messages.error(request, "Correo no encontrado.")
         return render(request, "login.html")
 
     if not usuario.get("estado", {}).get("activo", True):
-        messages.error(request, "Cuenta desactivada.")
+        messages.error(request, "Tu cuenta está desactivada. Contacta al administrador.")
         return render(request, "login.html")
 
     hash_guardado = usuario.get("autenticacion", {}).get("contrasena_hash")
     if not hash_guardado or not verificar_contrasena(hash_guardado, contrasena):
-        messages.error(request, "Credenciales inválidas.")
+        messages.error(request, "Contraseña incorrecta.")
         return render(request, "login.html")
+
+    # Seguridad: renovar identificador de sesión
+    request.session.cycle_key()
 
     # Guardar sesión
     request.session["usuario_id"] = str(usuario["_id"])
     request.session["rol"] = usuario.get("rol", "USUARIO")
 
+    # Mantener sesión
+    if recordar:
+        # Persistente aunque cierre navegador, hasta que cierre sesión
+        # o hasta que expire la cookie configurada
+        request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+    else:
+        # La sesión se pierde al cerrar el navegador
+        request.session.set_expiry(0)
+
     # Actualizar último acceso
     bd.usuarios.update_one(
         {"_id": usuario["_id"]},
-        {"$set": {"autenticacion.ultimo_acceso": timezone.now()}}
+        {
+            "$set": {
+                "autenticacion.ultimo_acceso": timezone.now(),
+                "meta.actualizado_en": timezone.now(),
+            }
+        }
     )
 
     # Redirección por rol
@@ -76,7 +95,6 @@ def vista_login(request):
     elif rol == "TECNICO":
         return redirect("tecnico")
     return redirect("usuario")
-
 
 @requiere_roles("USUARIO", "TECNICO", "ADMIN")
 def panel_usuario(request):
