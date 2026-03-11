@@ -22,7 +22,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
   background: var(--gris-claro);
   color: var(--negro);
   font-size: 14px;
@@ -539,7 +539,7 @@ body {
 
 .muted {
   color: var(--gris);
-  font-family: Helvetica, Arial, sans-serif;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
   font-size: .78rem;
 }
 
