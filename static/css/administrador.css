@@ -689,3 +689,252 @@ body {
 .btn-salir:hover{
   background: rgba(255,255,255,.10);
 }
+
+
+
+
+
+
+
+/* VISTA TECNICO AGREGADOS */
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    gap: 16px;
+}
+
+.topbar h1 {
+    margin: 0;
+    font-size: 38px;
+    font-weight: 700;
+}
+
+.topbar p {
+    margin: 6px 0 0;
+    color: #6b7280;
+}
+
+.topbar-acciones {
+    display: flex;
+    gap: 10px;
+}
+
+.resumen-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.card-resumen {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 22px;
+}
+
+.card-resumen h4 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: #6b7280;
+    letter-spacing: 1px;
+}
+
+.card-resumen .numero {
+    font-size: 44px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.card-resumen p {
+    margin-top: 8px;
+    color: #6b7280;
+}
+
+.bloque {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+
+.bloque-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 22px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.bloque-header h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.rf-tag {
+    background: #dcfce7;
+    color: #15803d;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.filtros-barra {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 18px 22px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.filtros-barra input,
+.filtros-barra select,
+.form-vertical select,
+.form-vertical textarea {
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 14px;
+    background: #fff;
+}
+
+.filtros-barra input {
+    min-width: 280px;
+    flex: 1;
+}
+
+.tabla-contenedor {
+    overflow-x: auto;
+}
+
+.tabla {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabla th,
+.tabla td {
+    padding: 14px 18px;
+    text-align: left;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+.tabla th {
+    font-size: 12px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.estado-nuevo { background: #dbeafe; color: #2563eb; }
+.estado-revision { background: #fef3c7; color: #b45309; }
+.estado-proceso { background: #e0e7ff; color: #4338ca; }
+.estado-resuelto { background: #dcfce7; color: #15803d; }
+.estado-cerrado { background: #e5e7eb; color: #374151; }
+
+.prioridad-alta { background: #fee2e2; color: #dc2626; }
+.prioridad-media { background: #fef3c7; color: #b45309; }
+.prioridad-baja { background: #dbeafe; color: #2563eb; }
+
+.btn,
+.btn-tabla {
+    display: inline-block;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #111827;
+    padding: 9px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.btn-primario {
+    background: #111827;
+    color: white;
+    border-color: #111827;
+}
+
+.btn-secundario {
+    background: white;
+    color: #374151;
+}
+
+.btn-peligro {
+    background: #dc2626;
+    color: white;
+    border-color: #dc2626;
+}
+
+.acciones {
+    white-space: nowrap;
+}
+
+.texto-suave,
+.sin-resultados {
+    color: #6b7280;
+}
+
+.detalle-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.detalle-lista {
+    padding: 20px 22px;
+    display: grid;
+    gap: 14px;
+}
+
+.form-vertical {
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.form-acciones {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.bitacora {
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.bitacora-item {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.bitacora-fecha {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.bitacora-contenido p {
+    margin: 6px 0 0;
+}

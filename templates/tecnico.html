@@ -1,2 +1,214 @@
-<h1>Panel Técnico</h1>
-<a href="{% url 'logout' %}">Cerrar sesión</a>
+{% extends "base.html" %}
+{% load static %}
+
+{% block titulo %}Panel Técnico - Sistema Tickets UTCJ{% endblock %}
+{% block subtitulo_sidebar %}Panel Técnico{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/tecnico.css' %}">
+{% endblock %}
+
+{% block titulo_panel %}Panel Técnico{% endblock %}
+{% block descripcion_panel %}Atención, seguimiento y resolución de tickets.{% endblock %}
+
+{% block menu %}
+<a href="{% url 'tecnico' %}" class="activo">🛠 Técnico</a>
+<a href="#tickets">📋 Tickets</a>
+<a href="#bitacora">📝 Bitácora</a>
+<a href="#">⚙ Configuración</a>
+{% endblock %}
+
+{% block header_acciones %}
+<a class="btn fantasma" href="{% url 'logout' %}">Cerrar sesión</a>
+{% endblock %}
+
+{% block contenido %}
+<main class="contenido tecnico-view">
+
+    <section class="resumen-cards">
+        <article class="card-resumen">
+            <span class="card-label">MIS TICKETS</span>
+            <h3>{{ tickets_asignados|default:"8" }}</h3>
+            <p>Asignados al técnico</p>
+        </article>
+
+        <article class="card-resumen">
+            <span class="card-label">NUEVOS</span>
+            <h3>{{ tickets_nuevos|default:"5" }}</h3>
+            <p>Disponibles para tomar</p>
+        </article>
+
+        <article class="card-resumen">
+            <span class="card-label">EN PROCESO</span>
+            <h3>{{ tickets_proceso|default:"3" }}</h3>
+            <p>Actualmente atendidos</p>
+        </article>
+
+        <article class="card-resumen">
+            <span class="card-label">RESUELTOS HOY</span>
+            <h3>{{ tickets_resueltos_hoy|default:"2" }}</h3>
+            <p>Cerrados este día</p>
+        </article>
+    </section>
+
+    <section class="panel-modulo" id="tickets">
+        <div class="panel-header">
+            <div class="panel-header-titulo">
+                <h3>Gestión de tickets</h3>
+            </div>
+        </div>
+
+        <form method="get" class="barra-filtros">
+            <input
+                type="text"
+                name="q"
+                value="{{ request.GET.q }}"
+                placeholder="Buscar por folio, activo o descripción"
+            >
+
+            <select name="laboratorio">
+                <option value="">Todos los laboratorios</option>
+                {% for lab in laboratorios %}
+                <option value="{{ lab.id }}" {% if request.GET.laboratorio == lab.id|stringformat:"s" %}selected{% endif %}>
+                    {{ lab.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <select name="categoria">
+                <option value="">Todas las categorías</option>
+                {% for cat in categorias %}
+                <option value="{{ cat.id }}" {% if request.GET.categoria == cat.id|stringformat:"s" %}selected{% endif %}>
+                    {{ cat.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <select name="estado">
+                <option value="">Todos los estados</option>
+                <option value="nuevo" {% if request.GET.estado == "nuevo" %}selected{% endif %}>Nuevo</option>
+                <option value="revision" {% if request.GET.estado == "revision" %}selected{% endif %}>En revisión</option>
+                <option value="proceso" {% if request.GET.estado == "proceso" %}selected{% endif %}>En proceso</option>
+                <option value="resuelto" {% if request.GET.estado == "resuelto" %}selected{% endif %}>Resuelto</option>
+                <option value="cerrado" {% if request.GET.estado == "cerrado" %}selected{% endif %}>Cerrado</option>
+            </select>
+
+            <div class="filtros-acciones">
+                <a href="{% url 'tecnico' %}" class="btn fantasma">Limpiar</a>
+                <button type="submit" class="btn negro">Aplicar</button>
+            </div>
+        </form>
+
+        <div class="tabla-wrap">
+            <table class="tabla-tickets">
+                <thead>
+                    <tr>
+                        <th>Folio</th>
+                        <th>Laboratorio</th>
+                        <th>Categoría</th>
+                        <th>Activo</th>
+                        <th>Descripción</th>
+                        <th>Prioridad</th>
+                        <th>Estado</th>
+                        <th>Técnico</th>
+                        <th>Últ. actualización</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ticket in tickets %}
+                    <tr>
+                        <td>{{ ticket.folio }}</td>
+                        <td>{{ ticket.laboratorio.nombre }}</td>
+                        <td>{{ ticket.categoria.nombre }}</td>
+                        <td>{{ ticket.activo }}</td>
+                        <td>{{ ticket.descripcion|truncatechars:30 }}</td>
+
+                        <td>
+                            {% if ticket.prioridad == "alta" %}
+                                <span class="pill prioridad alta">Alta</span>
+                            {% elif ticket.prioridad == "media" %}
+                                <span class="pill prioridad media">Media</span>
+                            {% else %}
+                                <span class="pill prioridad baja">Baja</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if ticket.estado == "nuevo" %}
+                                <span class="pill estado nuevo">Nuevo</span>
+                            {% elif ticket.estado == "revision" %}
+                                <span class="pill estado revision">En revisión</span>
+                            {% elif ticket.estado == "proceso" %}
+                                <span class="pill estado proceso">En proceso</span>
+                            {% elif ticket.estado == "resuelto" %}
+                                <span class="pill estado resuelto">Resuelto</span>
+                            {% else %}
+                                <span class="pill estado cerrado">Cerrado</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if ticket.tecnico_asignado %}
+                                {{ ticket.tecnico_asignado.get_full_name|default:ticket.tecnico_asignado.username }}
+                            {% else %}
+                                <span class="texto-suave">Sin asignar</span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ ticket.actualizado_en|date:"d-M H:i" }}</td>
+
+                        <td class="acciones-tabla">
+                            <a href="{% url 'ticket_detalle_tecnico' ticket.id %}" class="btn-tabla">Ver</a>
+
+                            {% if not ticket.tecnico_asignado %}
+                            <form method="post" action="{% url 'tomar_ticket' ticket.id %}" class="inline-form">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-tabla btn-tomar">Tomar</button>
+                            </form>
+                            {% endif %}
+
+                            {% if ticket.tecnico_asignado == request.user %}
+                            <a href="{% url 'ticket_gestionar' ticket.id %}" class="btn-tabla">Gestionar</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="sin-registros">No hay tickets para mostrar.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel-modulo" id="bitacora">
+        <div class="panel-header">
+            <div class="panel-header-titulo">
+                <h3>Acciones rápidas del técnico</h3>
+            </div>
+        </div>
+
+        <div class="acciones-rapidas">
+            <div class="accion-box">
+                <h4>Tomar ticket</h4>
+                <p>Asigna tickets sin responsable para comenzar seguimiento.</p>
+            </div>
+            <div class="accion-box">
+                <h4>Cambiar estado</h4>
+                <p>Actualiza el flujo de atención: nuevo, revisión, proceso o resuelto.</p>
+            </div>
+            <div class="accion-box">
+                <h4>Actualizar prioridad</h4>
+                <p>Marca tickets como alta, media o baja según urgencia.</p>
+            </div>
+            <div class="accion-box">
+                <h4>Registrar nota</h4>
+                <p>Guarda avances o solución con autor y fecha.</p>
+            </div>
+        </div>
+    </section>
+
+</main>
+{% endblock %}
