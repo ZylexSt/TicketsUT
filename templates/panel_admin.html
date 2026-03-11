@@ -82,17 +82,18 @@
           <h3>Gestión de usuarios</h3>
         </div>
 
-        <form method="GET" class="barra-der">
+        <form method="GET" class="barra-der form-auto-filtro">
           <div class="campo-busqueda">
             <input
               type="text"
               name="q_usuario"
               value="{{ filtros.q_usuario }}"
-              placeholder="Buscar por nombre, correo o matrícula..." />
+              placeholder="Buscar por nombre, correo o matrícula..." 
+              data-auto-submit="input"/>
           </div>
 
           <div class="campo-select">
-            <select name="rol_usuario">
+            <select name="rol_usuario" data-auto-submit="change">
               <option value="">Todos los roles</option>
               <option value="USUARIO" {% if filtros.rol_usuario == "USUARIO" %}selected{% endif %}>Usuario</option>
               <option value="TECNICO" {% if filtros.rol_usuario == "TECNICO" %}selected{% endif %}>Técnico</option>
@@ -101,7 +102,7 @@
           </div>
 
           <div class="campo-select">
-            <select name="estado_usuario">
+            <select name="estado_usuario" data-auto-submit="change">
               <option value="">Estado</option>
               <option value="ACTIVO" {% if filtros.estado_usuario == "ACTIVO" %}selected{% endif %}>Activo</option>
               <option value="INACTIVO" {% if filtros.estado_usuario == "INACTIVO" %}selected{% endif %}>Inactivo</option>
@@ -110,7 +111,6 @@
 
           <div class="filtros-acciones">
             <a class="btn" href="{% url 'panel_admin' %}">Limpiar</a>
-            <button class="btn primario" type="submit">Aplicar</button>
           </div>
         </form>
       </div>
@@ -156,21 +156,55 @@
             <div class="mono">{{ u.ultimo_acceso }}</div>
 
             <div class="acciones-fila">
-              <button class="mini" type="button">Editar</button>
-              <button class="mini" type="button">Contraseña</button>
+              {% if u.id %}
+                <button
+                  type="button"
+                  class="mini"
+                  onclick="abrirModalEditar(
+                    '{{ u.id }}',
+                    '{{ u.nombre|escapejs }}',
+                    '{{ u.identificador|escapejs }}',
+                    '{{ u.rol|escapejs }}'
+                  )">
+                  Editar
+                </button>
 
-              {% if u.activo %}
-                <form method="POST" action="{% url 'desactivar_usuario_admin' u.id %}" style="display:inline;">
-                  {% csrf_token %}
-                  <button class="mini peligro" type="submit">Desactivar</button>
-                </form>
+                <button
+                  type="button"
+                  class="mini"
+                  onclick="abrirModalPassword(
+                    '{{ u.id }}',
+                    '{{ u.nombre|escapejs }}',
+                    '{{ u.identificador|escapejs }}'
+                  )">
+                  Contraseña
+                </button>
+
+                {% if u.activo %}
+                  <form method="POST" action="{% url 'desactivar_usuario_admin' u.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button class="mini peligro" type="submit">Desactivar</button>
+                  </form>
+                {% else %}
+                  <form method="POST" action="{% url 'activar_usuario_admin' u.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button class="mini verde" type="submit">Activar</button>
+                  </form>
+
+                  <form method="POST"
+                        action="{% url 'eliminar_usuario_admin' u.id %}"
+                        style="display:inline;"
+                        onsubmit="return confirm('¿Seguro que deseas borrar este usuario? Esta acción no se puede deshacer.');">
+                    {% csrf_token %}
+                    <button class="mini peligro" type="submit">Borrar</button>
+                  </form>
+                {% endif %}
               {% else %}
-                <form method="POST" action="{% url 'activar_usuario_admin' u.id %}" style="display:inline;">
-                  {% csrf_token %}
-                  <button class="mini verde" type="submit">Activar</button>
-                </form>
+                <span class="muted">Sin acciones</span>
               {% endif %}
             </div>
+
+
             </div>
           {% empty %}
           <div class="fila">
@@ -191,15 +225,16 @@
         </div>
       </div>
 
-    <form method="GET" class="filtros">
+    <form method="GET" class="filtros form-auto-filtro">
       <div class="campo">
         <label>Buscar</label>
-        <input type="text" name="q_ticket" value="{{ filtros.q_ticket }}" placeholder="Folio, activo, laboratorio..." />
+        <input type="text" name="q_ticket" value="{{ filtros.q_ticket }}" placeholder="Folio, activo, laboratorio..." 
+        data-auto-submit="input"/>
       </div>
 
       <div class="campo">
         <label>Laboratorio</label>
-        <select name="lab_ticket">
+        <select name="lab_ticket" data-auto-submit="change">
           <option value="">Todos</option>
           {% for lab in laboratorios_filtro %}
             <option value="{{ lab.id }}" {% if filtros.lab_ticket == lab.id %}selected{% endif %}>{{ lab.nombre }}</option>
@@ -209,7 +244,7 @@
 
       <div class="campo">
         <label>Categoría</label>
-        <select name="cat_ticket">
+        <select name="cat_ticket" data-auto-submit="change"> 
           <option value="">Todas</option>
           {% for cat in categorias_filtro %}
             <option value="{{ cat.id }}" {% if filtros.cat_ticket == cat.id %}selected{% endif %}>{{ cat.nombre }}</option>
@@ -219,7 +254,7 @@
 
       <div class="campo">
         <label>Estado</label>
-        <select name="estado_ticket">
+        <select name="estado_ticket" data-auto-submit="change">
           <option value="">Todos</option>
           <option value="NUEVO" {% if filtros.estado_ticket == "NUEVO" %}selected{% endif %}>Nuevo</option>
           <option value="REVISION" {% if filtros.estado_ticket == "REVISION" %}selected{% endif %}>En revisión</option>
@@ -231,7 +266,7 @@
 
       <div class="campo">
         <label>Prioridad</label>
-        <select name="prioridad_ticket">
+        <select name="prioridad_ticket" data-auto-submit="change">
           <option value="">Todas</option>
           <option value="ALTA" {% if filtros.prioridad_ticket == "ALTA" %}selected{% endif %}>Alta</option>
           <option value="MEDIA" {% if filtros.prioridad_ticket == "MEDIA" %}selected{% endif %}>Media</option>
@@ -241,7 +276,7 @@
 
       <div class="campo">
         <label>Técnico asignado</label>
-        <select name="tecnico_ticket">
+        <select name="tecnico_ticket" data-auto-submit="change">
           <option value="">Todos</option>
           <option value="SIN_ASIGNAR" {% if filtros.tecnico_ticket == "SIN_ASIGNAR" %}selected{% endif %}>Sin asignar</option>
           {% for tec in tecnicos_filtro %}
@@ -272,51 +307,52 @@
           </div>
 
           {% for t in tickets %}
-          <div class="fila">
-            <div class="mono">{{ t.folio }}</div>
-            <div>{{ t.laboratorio_nombre }}</div>
-            <div>{{ t.categoria_nombre }}</div>
-            <div class="mono">{{ t.activo }}</div>
-            <div>{{ t.descripcion }}</div>
+            <div class="fila">
+              <div class="mono">{{ t.folio }}</div>
+              <div>{{ t.laboratorio_nombre }}</div>
+              <div>{{ t.categoria_nombre }}</div>
+              <div class="mono">{{ t.activo }}</div>
+              <div>{{ t.descripcion }}</div>
 
-            <div>
-              <span class="etiqueta {% if t.prioridad == 'ALTA' %}prio-alta{% elif t.prioridad == 'MEDIA' %}prio-media{% else %}prio-baja{% endif %}">
-                {{ t.prioridad|title }}
-              </span>
-            </div>
+              <div>
+                <span class="etiqueta {% if t.prioridad == 'ALTA' %}prio-alta{% elif t.prioridad == 'MEDIA' %}prio-media{% else %}prio-baja{% endif %}">
+                  {{ t.prioridad|title }}
+                </span>
+              </div>
 
-            <div>
-              <span class="etiqueta {% if t.estado == 'NUEVO' %}estado-nuevo{% elif t.estado == 'REVISION' %}estado-revision{% elif t.estado == 'PROCESO' %}estado-proceso{% else %}estado-resuelto{% endif %}">
-                {{ t.estado|title }}
-              </span>
-            </div>
+              <div>
+                <span class="etiqueta {% if t.estado == 'NUEVO' %}estado-nuevo{% elif t.estado == 'REVISION' %}estado-revision{% elif t.estado == 'PROCESO' %}estado-proceso{% else %}estado-resuelto{% endif %}">
+                  {{ t.estado|title }}
+                </span>
+              </div>
 
-            <div>
-              {% if t.tecnico == "Sin asignar" %}
-                <span class="muted">Sin asignar</span>
-              {% else %}
-                {{ t.tecnico }}
-              {% endif %}
-            </div>
+              <div>
+                {% if t.tecnico == "Sin asignar" %}
+                  <span class="muted">Sin asignar</span>
+                {% else %}
+                  {{ t.tecnico }}
+                {% endif %}
+              </div>
 
-            <div class="mono">{{ t.actualizado_en }}</div>
+              <div class="mono">{{ t.actualizado_en }}</div>
 
-            <div class="acciones-fila">
-              <button class="mini">Ver</button>
-              {% if t.tecnico == "Sin asignar" %}
-                <button class="mini">Asignar</button>
-              {% else %}
-                <button class="mini">Reasignar</button>
-              {% endif %}
+              <div class="acciones-fila">
+                <button type="button" class="mini">Ver</button>
+
+                {% if t.tecnico == "Sin asignar" %}
+                  <button type="button" class="mini">Asignar</button>
+                {% else %}
+                  <button type="button" class="mini">Reasignar</button>
+                {% endif %}
+              </div>
             </div>
-          </div>
-          {% empty %}
-          <div class="fila">
-            <div style="grid-column: 1 / -1;" class="muted">
-              No hay tickets registrados.
+            {% empty %}
+            <div class="fila">
+              <div style="grid-column: 1 / -1;" class="muted">
+                No hay tickets registrados.
+              </div>
             </div>
-          </div>
-          {% endfor %}
+            {% endfor %}
         </div>
       </div>
     </section>
@@ -345,8 +381,8 @@
         </div>
 
         <div class="campo-modal">
-          <label>Correo / Matrícula</label>
-          <input type="text" name="identificador" placeholder="usuario@utcj.edu.mx o matrícula" required />
+          <label>Correo </label>
+          <input type="text" name="identificador" placeholder="usuario@utcj.edu.mx" required />
         </div>
 
         <div class="campo-modal">
@@ -373,6 +409,85 @@
     </div>
   </div>
 
+
+    <!-- MODAL: EDITAR USUARIO -->
+<div class="modal-fondo" id="modal-editar" onclick="cerrarModalEditar(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-encabezado">
+      <h3>Editar usuario</h3>
+      <button type="button" class="cerrar-modal" onclick="cerrarModalEditar()">✕</button>
+    </div>
+
+    <form class="modal-form" method="POST" id="form-editar-usuario">
+      {% csrf_token %}
+
+      <div class="campo-modal">
+        <label>Nombre completo</label>
+        <input type="text" name="nombre" id="editar-nombre" required />
+      </div>
+
+      <div class="campo-modal">
+        <label>Correo o matrícula</label>
+        <input type="text" name="identificador" id="editar-identificador" required />
+      </div>
+
+      <div class="campo-modal">
+        <label>Rol</label>
+        <select name="rol" id="editar-rol" required>
+          <option value="USUARIO">Usuario</option>
+          <option value="TECNICO">Técnico</option>
+          <option value="ADMIN">Administrador</option>
+        </select>
+      </div>
+
+      <div class="modal-acciones">
+        <button type="button" class="btn fantasma" onclick="cerrarModalEditar()">Cancelar</button>
+        <button type="submit" class="btn primario">Guardar cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- MODAL: CAMBIAR CONTRASEÑA -->
+<div class="modal-fondo" id="modal-password" onclick="cerrarModalPassword(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-encabezado">
+      <h3>Cambiar contraseña</h3>
+      <button type="button" class="cerrar-modal" onclick="cerrarModalPassword()">✕</button>
+    </div>
+
+    <form class="modal-form" method="POST" id="form-password-usuario">
+      {% csrf_token %}
+
+      <div class="campo-modal">
+        <label>Usuario</label>
+        <input type="text" id="password-usuario-nombre" readonly />
+      </div>
+
+      <div class="campo-modal">
+        <label>Correo o matrícula</label>
+        <input type="text" id="password-usuario-identificador" readonly />
+      </div>
+
+      <div class="campo-modal">
+        <label>Nueva contraseña</label>
+        <input type="password" name="nueva_contrasena" id="password-nueva" required />
+      </div>
+
+      <div class="campo-modal">
+        <label>Confirmar contraseña</label>
+        <input type="password" name="confirmar_contrasena" id="password-confirmar" required />
+      </div>
+
+      <div class="modal-acciones">
+        <button type="button" class="btn fantasma" onclick="cerrarModalPassword()">Cancelar</button>
+        <button type="submit" class="btn primario">Actualizar contraseña</button>
+      </div>
+    </form>
+  </div>
+</div>
+
   <script>
     function abrirModal() {
       const m = document.getElementById('modal');
@@ -398,5 +513,77 @@
       inp.type = 'text';
     }
   </script>
+  
+  <script>
+  function abrirModalEditar(id, nombre, identificador, rol) {
+    const modal = document.getElementById('modal-editar');
+    const form = document.getElementById('form-editar-usuario');
+
+    document.getElementById('editar-nombre').value = nombre;
+    document.getElementById('editar-identificador').value = identificador;
+    document.getElementById('editar-rol').value = rol;
+
+    form.action = `/administrador/usuarios/${id}/editar/`;
+    modal.classList.add('visible');
+  }
+
+  function cerrarModalEditar(e) {
+    const modal = document.getElementById('modal-editar');
+    if (!modal) return;
+    if (!e || e.target === modal) {
+      modal.classList.remove('visible');
+    }
+  }
+
+  function abrirModalPassword(id, nombre, identificador) {
+    const modal = document.getElementById('modal-password');
+    const form = document.getElementById('form-password-usuario');
+
+    document.getElementById('password-usuario-nombre').value = nombre;
+    document.getElementById('password-usuario-identificador').value = identificador;
+    document.getElementById('password-nueva').value = '';
+    document.getElementById('password-confirmar').value = '';
+
+    form.action = `/administrador/usuarios/${id}/password/`;
+    modal.classList.add('visible');
+  }
+
+  function cerrarModalPassword(e) {
+    const modal = document.getElementById('modal-password');
+    if (!modal) return;
+    if (!e || e.target === modal) {
+      modal.classList.remove('visible');
+    }
+  }
+</script>
+
+  <!-- Filtros tiempo real -->
+   <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const forms = document.querySelectorAll('.form-auto-filtro');
+
+    forms.forEach(function (form) {
+      let timer = null;
+
+      const camposInput = form.querySelectorAll('[data-auto-submit="input"]');
+      const camposChange = form.querySelectorAll('[data-auto-submit="change"]');
+
+      camposInput.forEach(function (campo) {
+        campo.addEventListener('input', function () {
+          clearTimeout(timer);
+          timer = setTimeout(function () {
+            form.submit();
+          }, 500); // espera 500 ms 
+        });
+      });
+
+      camposChange.forEach(function (campo) {
+        campo.addEventListener('change', function () {
+          form.submit();
+        });
+      });
+    });
+  });
+</script>
 </body>
 </html>

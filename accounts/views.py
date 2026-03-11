@@ -71,7 +71,6 @@ def vista_login(request):
     # Mantener sesión
     if recordar:
         # Persistente aunque cierre navegador, hasta que cierre sesión
-        # o hasta que expire la cookie configurada
         request.session.set_expiry(settings.SESSION_COOKIE_AGE)
     else:
         # La sesión se pierde al cerrar el navegador
@@ -270,9 +269,13 @@ def panel_admin(request):
         if not iniciales:
             iniciales = "US"
 
+        usuario_id = u.get("_id")
+
         usuarios.append({
-            "id": str(u["_id"]),
+            "id": str(usuario_id) if usuario_id else "",
             "nombre": nombre,
+            "correo": correo,
+            "matricula": matricula,
             "identificador": identificador,
             "rol": rol,
             "activo": activo,
@@ -334,16 +337,15 @@ def panel_admin(request):
         bd.tickets.find(tickets_query).sort("meta.actualizado_en", -1)
     )
 
-    # mapa de usuarios para mostrar nombre corto del técnico
     todos_usuarios_raw = list(bd.usuarios.find())
     user_map = {
         str(u["_id"]): u.get("perfil", {}).get("nombre", "Sin nombre")
         for u in todos_usuarios_raw
     }
+
     tickets = []
     tickets_hoy = 0
     sin_resolver = 0
-
     hoy = timezone.localdate()
 
     for t in tickets_raw:
@@ -376,46 +378,45 @@ def panel_admin(request):
             "actualizado_en": actualizado_en.strftime("%d-%b %H:%M") if actualizado_en else "—",
         })
 
-        context = {
-            "usuarios": usuarios,
-            "tickets": tickets,
-            "kpis": {
-                "usuarios_totales": total_usuarios,
-                "tecnicos": total_tecnicos,
-                "tickets_hoy": tickets_hoy,
-                "sin_resolver": sin_resolver,
-            },
-            "filtros": {
-                "q_usuario": q_usuario,
-                "rol_usuario": rol_usuario,
-                "estado_usuario": estado_usuario,
-                "q_ticket": q_ticket,
-                "lab_ticket": lab_ticket,
-                "cat_ticket": cat_ticket,
-                "estado_ticket": estado_ticket,
-                "prioridad_ticket": prioridad_ticket,
-                "tecnico_ticket": tecnico_ticket,
-            },
-            "laboratorios_filtro": [
-                {"id": str(x["_id"]), "nombre": x["nombre"]}
-                for x in labs
-            ],
-            "categorias_filtro": [
-                {"id": str(x["_id"]), "nombre": x["nombre"]}
-                for x in cats
-            ],
-            "tecnicos_filtro": [
-                {
-                    "id": str(u["_id"]),
-                    "nombre": u.get("perfil", {}).get("nombre", "Sin nombre")
-                }
-                for u in todos_usuarios_raw
-                if u.get("rol") == "TECNICO" and u.get("estado", {}).get("activo", True)
-            ],
-        }
+    context = {
+        "usuarios": usuarios,
+        "tickets": tickets,
+        "kpis": {
+            "usuarios_totales": total_usuarios,
+            "tecnicos": total_tecnicos,
+            "tickets_hoy": tickets_hoy,
+            "sin_resolver": sin_resolver,
+        },
+        "filtros": {
+            "q_usuario": q_usuario,
+            "rol_usuario": rol_usuario,
+            "estado_usuario": estado_usuario,
+            "q_ticket": q_ticket,
+            "lab_ticket": lab_ticket,
+            "cat_ticket": cat_ticket,
+            "estado_ticket": estado_ticket,
+            "prioridad_ticket": prioridad_ticket,
+            "tecnico_ticket": tecnico_ticket,
+        },
+        "laboratorios_filtro": [
+            {"id": str(x["_id"]), "nombre": x["nombre"]}
+            for x in labs
+        ],
+        "categorias_filtro": [
+            {"id": str(x["_id"]), "nombre": x["nombre"]}
+            for x in cats
+        ],
+        "tecnicos_filtro": [
+            {
+                "id": str(u["_id"]),
+                "nombre": u.get("perfil", {}).get("nombre", "Sin nombre")
+            }
+            for u in todos_usuarios_raw
+            if u.get("rol") == "TECNICO" and u.get("estado", {}).get("activo", True)
+        ],
+    }
 
     return render(request, "panel_admin.html", context)
-
 
 @require_POST
 @requiere_roles("ADMIN")
@@ -462,6 +463,140 @@ def crear_usuario_admin(request):
     messages.success(request, "Usuario creado correctamente.")
     return redirect("panel_admin")
 
+
+@require_POST
+@requiere_roles("ADMIN")
+def editar_usuario_admin(request, usuario_id):
+    bd = obtener_bd()
+
+    try:
+        oid = ObjectId(usuario_id)
+    except InvalidId:
+        messages.error(request, "ID de usuario inválido.")
+        return redirect("panel_admin")
+
+    usuario = bd.usuarios.find_one({"_id": oid})
+    if not usuario:
+        messages.error(request, "Usuario no encontrado.")
+        return redirect("panel_admin")
+
+    nombre = request.POST.get("nombre", "").strip()
+    identificador = request.POST.get("identificador", "").strip().lower()
+    rol = request.POST.get("rol", "").strip().upper()
+
+    if not nombre or not identificador or not rol:
+        messages.error(request, "Todos los campos son obligatorios.")
+        return redirect("panel_admin")
+
+    if rol not in ["USUARIO", "TECNICO", "ADMIN"]:
+        messages.error(request, "Rol inválido.")
+        return redirect("panel_admin")
+
+    es_correo = "@" in identificador
+
+    if es_correo and not identificador.endswith("@utcj.edu.mx"):
+        messages.error(request, "Solo se permiten correos institucionales UTCJ.")
+        return redirect("panel_admin")
+
+    filtro_existente = {"_id": {"$ne": oid}}
+    if es_correo:
+        filtro_existente["perfil.correo"] = identificador
+    else:
+        filtro_existente["perfil.matricula"] = identificador
+
+    if bd.usuarios.find_one(filtro_existente):
+        messages.error(request, "Ya existe otro usuario con ese correo/matrícula.")
+        return redirect("panel_admin")
+
+    bd.usuarios.update_one(
+        {"_id": oid},
+        {
+            "$set": {
+                "perfil.nombre": nombre,
+                "perfil.correo": identificador if es_correo else None,
+                "perfil.matricula": None if es_correo else identificador,
+                "rol": rol,
+                "meta.actualizado_en": timezone.now(),
+            }
+        }
+    )
+
+    messages.success(request, "Usuario actualizado correctamente.")
+    return redirect("panel_admin")
+
+@require_POST
+@requiere_roles("ADMIN")
+def cambiar_password_admin(request, usuario_id):
+    bd = obtener_bd()
+
+    try:
+        oid = ObjectId(usuario_id)
+    except InvalidId:
+        messages.error(request, "ID de usuario inválido.")
+        return redirect("panel_admin")
+
+    usuario = bd.usuarios.find_one({"_id": oid})
+    if not usuario:
+        messages.error(request, "Usuario no encontrado.")
+        return redirect("panel_admin")
+
+    nueva = request.POST.get("nueva_contrasena", "").strip()
+    confirmar = request.POST.get("confirmar_contrasena", "").strip()
+
+    if not nueva or not confirmar:
+        messages.error(request, "Debes llenar ambos campos.")
+        return redirect("panel_admin")
+
+    if nueva != confirmar:
+        messages.error(request, "Las contraseñas no coinciden.")
+        return redirect("panel_admin")
+
+    if len(nueva) < 6:
+        messages.error(request, "La contraseña debe tener al menos 6 caracteres.")
+        return redirect("panel_admin")
+
+    bd.usuarios.update_one(
+        {"_id": oid},
+        {
+            "$set": {
+                "autenticacion.contrasena_hash": crear_hash_contrasena(nueva),
+                "meta.actualizado_en": timezone.now(),
+            }
+        }
+    )
+
+    messages.success(request, "Contraseña actualizada correctamente.")
+    return redirect("panel_admin")
+
+@require_POST
+@requiere_roles("ADMIN")
+def eliminar_usuario_admin(request, usuario_id):
+    bd = obtener_bd()
+
+    try:
+        oid = ObjectId(usuario_id)
+    except InvalidId:
+        messages.error(request, "ID de usuario inválido.")
+        return redirect("panel_admin")
+
+    usuario = bd.usuarios.find_one({"_id": oid})
+    if not usuario:
+        messages.error(request, "Usuario no encontrado.")
+        return redirect("panel_admin")
+
+    if request.session.get("usuario_id") == usuario_id:
+        messages.error(request, "No puedes borrar tu propia cuenta.")
+        return redirect("panel_admin")
+
+    if usuario.get("estado", {}).get("activo", True):
+        messages.error(request, "Primero debes desactivar al usuario antes de borrarlo.")
+        return redirect("panel_admin")
+
+    bd.usuarios.delete_one({"_id": oid})
+
+    messages.success(request, "Usuario eliminado correctamente.")
+    return redirect("panel_admin")
+
 @require_POST
 @requiere_roles("ADMIN")
 def activar_usuario_admin(request, usuario_id):
@@ -471,6 +606,11 @@ def activar_usuario_admin(request, usuario_id):
         oid = ObjectId(usuario_id)
     except InvalidId:
         messages.error(request, "ID de usuario inválido.")
+        return redirect("panel_admin")
+
+    usuario = bd.usuarios.find_one({"_id": oid})
+    if not usuario:
+        messages.error(request, "Usuario no encontrado.")
         return redirect("panel_admin")
 
     bd.usuarios.update_one(
@@ -486,7 +626,6 @@ def activar_usuario_admin(request, usuario_id):
     messages.success(request, "Usuario activado correctamente.")
     return redirect("panel_admin")
 
-
 @require_POST
 @requiere_roles("ADMIN")
 def desactivar_usuario_admin(request, usuario_id):
@@ -498,7 +637,11 @@ def desactivar_usuario_admin(request, usuario_id):
         messages.error(request, "ID de usuario inválido.")
         return redirect("panel_admin")
 
-    # opcional: evitar desactivar al propio admin logueado
+    usuario = bd.usuarios.find_one({"_id": oid})
+    if not usuario:
+        messages.error(request, "Usuario no encontrado.")
+        return redirect("panel_admin")
+
     if request.session.get("usuario_id") == usuario_id:
         messages.error(request, "No puedes desactivar tu propia cuenta.")
         return redirect("panel_admin")
