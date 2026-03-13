@@ -51,6 +51,16 @@
       </div>
     </header>
 
+    {% if messages %}
+      <div class="contenedor-mensajes">
+        {% for message in messages %}
+          <div class="mensaje-alerta {{ message.tags }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
     <!-- TARJETAS RESUMEN -->
     <section class="resumen">
       <article class="tarjeta">
