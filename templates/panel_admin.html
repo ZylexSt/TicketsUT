@@ -950,30 +950,24 @@
     modal.classList.add('visible');
   }
 
-  function cerrarModalVerTicket(e) {
-    const modal = document.getElementById('modal-ver-ticket');
-    const img = document.getElementById('ver-evidencia-img');
-    const link = document.getElementById('ver-evidencia-link');
-    const vacio = document.getElementById('visor-evidencia-vacio');
+  function abrirModalAsignarTicket(ticketId, folio, tecnicoIdActual) {
+    const modal = document.getElementById('modal-asignar-ticket');
+    const form = document.getElementById('form-asignar-ticket');
+    const select = document.getElementById('asignar-tecnico');
 
+    document.getElementById('asignar-folio').value = folio || '—';
+    select.value = tecnicoIdActual || '';
+    form.action = `/administrador/tickets/${ticketId}/asignar/`;
+
+    modal.classList.add('visible');
+  }
+
+  function cerrarModalAsignarTicket(e) {
+    const modal = document.getElementById('modal-asignar-ticket');
     if (!modal) return;
 
     if (!e || e.target === modal) {
       modal.classList.remove('visible');
-
-      if (img) {
-        img.src = '';
-        img.style.display = 'none';
-      }
-
-      if (link) {
-        link.href = '#';
-        link.style.display = 'none';
-      }
-
-      if (vacio) {
-        vacio.style.display = 'flex';
-      }
     }
   }
 </script>
