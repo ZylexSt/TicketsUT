@@ -2,6 +2,10 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.utils import timezone
+from django.core.paginator import Paginator
+
+from django.urls import reverse
+from django.shortcuts import redirect
 
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -10,11 +14,18 @@ from ..mongo import obtener_bd
 from ..decoradores import requiere_roles
 from ..seguridad import crear_hash_contrasena
 
+
+
+
 @requiere_roles("ADMIN")
 def panel_admin(request):
     bd = obtener_bd()
 
-    # USUARIOS
+    seccion = request.GET.get("seccion", "usuarios").strip().lower()
+    if seccion not in ["usuarios", "tickets"]:
+        seccion = "usuarios"
+
+    # ---------------- USUARIOS ----------------
     q_usuario = request.GET.get("q_usuario", "").strip()
     rol_usuario = request.GET.get("rol_usuario", "").strip().upper()
     estado_usuario = request.GET.get("estado_usuario", "").strip().upper()
@@ -69,10 +80,8 @@ def panel_admin(request):
         if not iniciales:
             iniciales = "US"
 
-        usuario_id = u.get("_id")
-
         usuarios.append({
-            "id": str(usuario_id) if usuario_id else "",
+            "id": str(u["_id"]),
             "nombre": nombre,
             "correo": correo,
             "matricula": matricula,
@@ -83,14 +92,17 @@ def panel_admin(request):
             "iniciales": iniciales,
         })
 
-    # CATÁLOGOS
-    labs = list(bd.catalogos_laboratorios.find({"activo": True}))
-    cats = list(bd.catalogos_categorias.find({"activo": True}))
+    # ---------------- CATÁLOGOS ----------------
+    labs = list(bd.catalogos_laboratorios.find({"activo": True}).sort("orden", 1))
+    cats = list(bd.catalogos_categorias.find({"activo": True}).sort("orden", 1))
 
     lab_map = {str(x["_id"]): x["nombre"] for x in labs}
     cat_map = {str(x["_id"]): x["nombre"] for x in cats}
 
-    # TICKETS
+    laboratorios = [{"id": str(x["_id"]), "nombre": x["nombre"]} for x in labs]
+    categorias = [{"id": str(x["_id"]), "nombre": x["nombre"]} for x in cats]
+
+    # ---------------- TICKETS ----------------
     q_ticket = request.GET.get("q_ticket", "").strip()
     lab_ticket = request.GET.get("lab_ticket", "").strip()
     cat_ticket = request.GET.get("cat_ticket", "").strip()
@@ -129,7 +141,7 @@ def panel_admin(request):
     if q_ticket:
         tickets_query["$or"] = [
             {"folio": {"$regex": q_ticket, "$options": "i"}},
-            {"activo": {"$regex": q_ticket, "$options": "i"}},
+            {"codigo": {"$regex": q_ticket, "$options": "i"}},
             {"descripcion": {"$regex": q_ticket, "$options": "i"}},
         ]
 
@@ -170,17 +182,33 @@ def panel_admin(request):
             "folio": t.get("folio", "—"),
             "laboratorio_nombre": lab_map.get(str(t.get("laboratorio_id")), "—"),
             "categoria_nombre": cat_map.get(str(t.get("categoria_id")), "—"),
-            "activo": t.get("activo", "—"),
+            "codigo": t.get("codigo", "—"),
             "descripcion": t.get("descripcion", "—"),
             "prioridad": prioridad,
             "estado": estado,
             "tecnico": tecnico_nombre,
+            "tecnico_id": str(asignado_a) if asignado_a else "",
             "actualizado_en": actualizado_en.strftime("%d-%b %H:%M") if actualizado_en else "—",
+            "creado_en": creado_en.strftime("%d-%b %H:%M") if creado_en else "—",
+            "evidencia_url": (
+                t.get("evidencias", [{}])[0].get("url")
+                if t.get("evidencias") else ""
+            ),
         })
 
+    # ---------------- PAGINACIÓN ----------------
+    pagina_usuarios = request.GET.get("pagina_usuarios", 1)
+    paginador_usuarios = Paginator(usuarios, 10)
+    usuarios_page = paginador_usuarios.get_page(pagina_usuarios)
+
+    pagina_tickets = request.GET.get("pagina_tickets", 1)
+    paginador_tickets = Paginator(tickets, 10)
+    tickets_page = paginador_tickets.get_page(pagina_tickets)
+
     context = {
-        "usuarios": usuarios,
-        "tickets": tickets,
+        "usuarios": usuarios_page,
+        "tickets": tickets_page,
+        "seccion_activa": seccion,
         "kpis": {
             "usuarios_totales": total_usuarios,
             "tecnicos": total_tecnicos,
@@ -216,7 +244,11 @@ def panel_admin(request):
         ],
     }
 
+    context["laboratorios"] = laboratorios
+    context["categorias"] = categorias
+
     return render(request, "panel_admin.html", context)
+
 
 @require_POST
 @requiere_roles("ADMIN")
@@ -308,6 +340,8 @@ def editar_usuario_admin(request, usuario_id):
         return redirect("panel_admin")
 
     bd.usuarios.update_one(
+
+
         {"_id": oid},
         {
             "$set": {
@@ -457,3 +491,70 @@ def desactivar_usuario_admin(request, usuario_id):
 
     messages.success(request, "Usuario desactivado correctamente.")
     return redirect("panel_admin")
+
+
+@require_POST
+@requiere_roles("ADMIN")
+def asignar_ticket_admin(request, ticket_id):
+    bd = obtener_bd()
+
+    try:
+        ticket_oid = ObjectId(ticket_id)
+    except InvalidId:
+        messages.error(request, "ID de ticket inválido.")
+        return redirect(f"{reverse('panel_admin')}?seccion=tickets")
+
+    tecnico_id = request.POST.get("tecnico_id", "").strip()
+
+    if not tecnico_id:
+        messages.error(request, "Debes seleccionar un técnico.")
+        return redirect(f"{reverse('panel_admin')}?seccion=tickets")
+
+    try:
+        tecnico_oid = ObjectId(tecnico_id)
+    except InvalidId:
+        messages.error(request, "ID de técnico inválido.")
+        return redirect(f"{reverse('panel_admin')}?seccion=tickets")
+
+    ticket = bd.tickets.find_one({"_id": ticket_oid})
+    if not ticket:
+        messages.error(request, "Ticket no encontrado.")
+        return redirect(f"{reverse('panel_admin')}?seccion=tickets")
+
+    tecnico = bd.usuarios.find_one({
+        "_id": tecnico_oid,
+        "rol": "TECNICO",
+        "estado.activo": True
+    })
+
+    if not tecnico:
+        messages.error(request, "El técnico seleccionado no es válido.")
+        return redirect(f"{reverse('panel_admin')}?seccion=tickets")
+
+    ahora = timezone.now()
+
+    nuevo_estado = ticket.get("estado", "NUEVO")
+    if nuevo_estado == "NUEVO":
+        nuevo_estado = "REVISION"
+
+    bd.tickets.update_one(
+        {"_id": ticket_oid},
+        {
+            "$set": {
+                "asignado_a": tecnico_oid,
+                "estado": nuevo_estado,
+                "meta.actualizado_en": ahora
+            },
+            "$push": {
+                "historial": {
+                    "estado": nuevo_estado,
+                    "por": ObjectId(request.session.get("usuario_id")),
+                    "fecha": ahora,
+                    "nota": f"Ticket asignado a {tecnico.get('perfil', {}).get('nombre', 'Técnico')}"
+                }
+            }
+        }
+    )
+
+    messages.success(request, "Ticket asignado correctamente.")
+    return redirect(f"{reverse('panel_admin')}?seccion=tickets")

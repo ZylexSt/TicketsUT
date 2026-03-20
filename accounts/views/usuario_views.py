@@ -4,6 +4,8 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.utils import timezone
+from django.urls import reverse
+from django.shortcuts import redirect
 
 from bson import ObjectId
 
@@ -39,7 +41,7 @@ def panel_usuario(request):
                 "folio": t.get("folio", ""),
                 "laboratorio_nombre": lab_map.get(str(t.get("laboratorio_id")), "—"),
                 "categoria_nombre": cat_map.get(str(t.get("categoria_id")), "—"),
-                "activo": t.get("activo", ""),
+                "codigo": t.get("codigo", ""),
                 "descripcion": t.get("descripcion", ""),
                 "prioridad": t.get("prioridad", "MEDIA"),
                 "estado": t.get("estado", "NUEVO"),
@@ -54,73 +56,127 @@ def panel_usuario(request):
 
 
 
-
 @require_POST
 @requiere_roles("USUARIO", "TECNICO", "ADMIN")
-def crear_ticket_usuario(request):
+def crear_ticket(request):
     bd = obtener_bd()
 
     usuario_id = request.session.get("usuario_id")
+    rol = request.session.get("rol")
 
     laboratorio_id = request.POST.get("laboratorio_id")
     categoria_id = request.POST.get("categoria_id")
-    activo = request.POST.get("activo")
-    prioridad = request.POST.get("prioridad")
-    descripcion = request.POST.get("descripcion")
+    codigo = (request.POST.get("codigo") or "").strip()
+    prioridad = (request.POST.get("prioridad") or "").strip().upper()
+    descripcion = (request.POST.get("descripcion") or "").strip()
+
+    def redireccion_final():
+        if rol == "ADMIN":
+            return redirect(f"{reverse('panel_admin')}?seccion=tickets")
+        elif rol == "TECNICO":
+            return redirect("tecnico")
+        return redirect("usuario")
+
+    if not usuario_id:
+        messages.error(request, "Tu sesión no es válida.")
+        return redirect("login")
+
+    if not laboratorio_id or not categoria_id or not codigo or not descripcion:
+        messages.error(request, "Completa todos los campos obligatorios del ticket.")
+        return redireccion_final()
+
+    if prioridad not in ["BAJA", "MEDIA", "ALTA"]:
+        prioridad = "MEDIA"
+
+    codigo_normalizado = codigo.upper().replace(" ", "")
+
+    try:
+        usuario_oid = ObjectId(usuario_id)
+        laboratorio_oid = ObjectId(laboratorio_id)
+        categoria_oid = ObjectId(categoria_id)
+    except InvalidId:
+        messages.error(request, "Los datos enviados no son válidos.")
+        return redireccion_final()
+
+    # Bloquear tickets duplicados abiertos para el mismo código
+    ticket_existente = bd.tickets.find_one({
+        "codigo_normalizado": codigo_normalizado,
+        "estado": {"$in": ["NUEVO", "REVISION", "PROCESO"]}
+    })
+
+    if ticket_existente:
+        messages.warning(
+            request,
+            f"Ya existe un ticket abierto para el código {codigo_normalizado}."
+        )
+        return redireccion_final()
 
     evidencia_url = None
 
-    if "evidencia" in request.FILES:
+    if "evidencia" in request.FILES and request.FILES["evidencia"]:
         archivo = request.FILES["evidencia"]
 
-        fs = FileSystemStorage(
-            location=settings.MEDIA_ROOT / "tickets"
-        )
-
+        fs = FileSystemStorage(location=settings.MEDIA_ROOT / "tickets")
         nombre = fs.save(archivo.name, archivo)
-
         evidencia_url = f"/media/tickets/{nombre}"
 
-    folio = siguiente_folio_ticket()
+    try:
+        folio = siguiente_folio_ticket()
 
-    ticket = {
-        "folio": folio,
-        "creado_por": ObjectId(usuario_id),
-
-        "laboratorio_id": ObjectId(laboratorio_id),
-        "categoria_id": ObjectId(categoria_id),
-
-        "activo": activo,
-        "descripcion": descripcion,
-        "prioridad": prioridad,
-
-        "estado": "NUEVO",
-
-        "historial": [
-            {
-                "estado": "NUEVO",
-                "por": ObjectId(usuario_id),
-                "fecha": timezone.now(),
-                "nota": "Ticket creado"
+        ticket = {
+            "folio": folio,
+            "creado_por": usuario_oid,
+            "laboratorio_id": laboratorio_oid,
+            "categoria_id": categoria_oid,
+            "codigo": codigo,
+            "codigo_normalizado": codigo_normalizado,
+            "descripcion": descripcion,
+            "prioridad": prioridad,
+            "estado": "NUEVO",
+            "historial": [
+                {
+                    "estado": "NUEVO",
+                    "por": usuario_oid,
+                    "fecha": timezone.now(),
+                    "nota": "Ticket creado"
+                }
+            ],
+            "evidencias": [
+                {
+                    "url": evidencia_url,
+                    "fecha": timezone.now(),
+                    "subido_por": usuario_oid
+                }
+            ] if evidencia_url else [],
+            "meta": {
+                "creado_en": timezone.now(),
+                "actualizado_en": timezone.now()
             }
-        ],
-
-        "evidencias": [
-            {
-                "url": evidencia_url,
-                "fecha": timezone.now(),
-                "subido_por": ObjectId(usuario_id)
-            }
-        ] if evidencia_url else [],
-
-        "meta": {
-            "creado_en": timezone.now(),
-            "actualizado_en": timezone.now()
         }
-    }
 
-    bd.tickets.insert_one(ticket)
-    messages.success(request, f"Ticket {folio} creado correctamente.")
-    return redirect("usuario")
+        codigo_normalizado = codigo.upper().replace(" ", "")
 
+        ticket_existente = bd.tickets.find_one({
+            "codigo_normalizado": codigo_normalizado,
+            "estado": {"$in": ["NUEVO", "REVISION", "PROCESO"]}
+        })
 
+        if ticket_existente:
+            messages.warning(
+                request,
+                f"Ya existe un ticket abierto para el código {codigo_normalizado}."
+            )
+
+            if rol == "ADMIN":
+                return redirect(f"{reverse('panel_admin')}?seccion=tickets")
+            elif rol == "TECNICO":
+                return redirect("tecnico")
+            return redirect("usuario")
+
+        bd.tickets.insert_one(ticket)
+        messages.success(request, f"Ticket {folio} creado correctamente.")
+
+    except Exception:
+        messages.error(request, "No se pudo crear el ticket. Verifica los datos enviados.")
+
+    return redireccion_final()

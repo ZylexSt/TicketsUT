@@ -21,11 +21,15 @@
       </div>
 
       <nav class="menu">
-        <a href="#" class="activo">Administrador</a>
-        <a href="#">Usuarios</a>
-        <a href="#">Todos los Tickets</a>
-        <a href="#"> Bitácora</a>
-        <a href="#"> Configuración</a>
+        <a href="{% url 'panel_admin' %}?seccion=usuarios"
+          class="{% if seccion_activa == 'usuarios' %}activo{% endif %}">
+          Usuarios
+        </a>
+
+        <a href="{% url 'panel_admin' %}?seccion=tickets"
+          class="{% if seccion_activa == 'tickets' %}activo{% endif %}">
+          Todos los Tickets
+        </a>
       </nav>
 
       <div class="sidebar-pie">
@@ -47,7 +51,8 @@
       </div>
       <div class="encabezado-der">
         <a class="btn fantasma" href="{% url 'logout' %}">Cerrar sesión</a>
-        <button class="btn primario" type="button" onclick="abrirModal()">+ Nuevo usuario</button>
+        <button class="btn primario" type="button" onclick="abrirModalUsuario()">+ Nuevo usuario</button>
+        <button class="btn primario" type="button" onclick="abrirModalTicket()">+ Nuevo ticket</button>
       </div>
     </header>
 
@@ -86,6 +91,8 @@
     </section>
 
     <!-- SECCIÓN USUARIOS -->
+    <main class="contenido-principal">
+    {% if seccion_activa == "usuarios" %}
     <section class="seccion-usuarios">
       <div class="barra-usuarios">
         <div class="barra-izq">
@@ -93,6 +100,8 @@
         </div>
 
         <form method="GET" class="barra-der form-auto-filtro">
+          <input type="hidden" name="seccion" value="usuarios">
+          <input type="hidden" name="pagina_usuarios" value="1">          
           <div class="campo-busqueda">
             <input
               type="text"
@@ -120,7 +129,7 @@
           </div>
 
           <div class="filtros-acciones">
-            <a class="btn" href="{% url 'panel_admin' %}">Limpiar</a>
+            <a class="btn" href="{% url 'panel_admin' %}?seccion=usuarios">Limpiar</a>
           </div>
         </form>
       </div>
@@ -191,19 +200,18 @@
                 </button>
 
                 {% if u.activo %}
-                  <form method="POST" action="{% url 'desactivar_usuario_admin' u.id %}" style="display:inline;">
+                  <form method="POST" action="{% url 'desactivar_usuario_admin' u.id %}" class="span-2">
                     {% csrf_token %}
                     <button class="mini peligro" type="submit">Desactivar</button>
                   </form>
                 {% else %}
-                  <form method="POST" action="{% url 'activar_usuario_admin' u.id %}" style="display:inline;">
+                  <form method="POST" action="{% url 'activar_usuario_admin' u.id %}">
                     {% csrf_token %}
                     <button class="mini verde" type="submit">Activar</button>
                   </form>
 
                   <form method="POST"
                         action="{% url 'eliminar_usuario_admin' u.id %}"
-                        style="display:inline;"
                         onsubmit="return confirm('¿Seguro que deseas borrar este usuario? Esta acción no se puede deshacer.');">
                     {% csrf_token %}
                     <button class="mini peligro" type="submit">Borrar</button>
@@ -225,9 +233,26 @@
           {% endfor %}
         </div>
       </div>
-    </section>
+      {% if usuarios.paginator.num_pages > 1 %}
+      <div class="paginacion">
+        {% if usuarios.has_previous %}
+          <a class="btn" href="?seccion=usuarios&pagina_usuarios={{ usuarios.previous_page_number }}&q_usuario={{ filtros.q_usuario }}&rol_usuario={{ filtros.rol_usuario }}&estado_usuario={{ filtros.estado_usuario }}">Anterior</a>
+        {% endif %}
 
+        <span class="pagina-info">
+          Página {{ usuarios.number }} de {{ usuarios.paginator.num_pages }}
+        </span>
+
+        {% if usuarios.has_next %}
+          <a class="btn" href="?seccion=usuarios&pagina_usuarios={{ usuarios.next_page_number }}&q_usuario={{ filtros.q_usuario }}&rol_usuario={{ filtros.rol_usuario }}&estado_usuario={{ filtros.estado_usuario }}">Siguiente</a>
+        {% endif %}
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+    
     <!-- SECCIÓN TODOS LOS TICKETS -->
+     {% if seccion_activa == "tickets" %}
     <section class="seccion-tickets">
       <div class="barra-tickets">
         <div class="barra-izq">
@@ -238,8 +263,10 @@
     <form method="GET" class="filtros form-auto-filtro">
       <div class="campo">
         <label>Buscar</label>
-        <input type="text" name="q_ticket" value="{{ filtros.q_ticket }}" placeholder="Folio, activo, laboratorio..." 
-        data-auto-submit="input"/>
+        <input type="hidden" name="seccion" value="tickets">
+        <input type="hidden" name="pagina_tickets" value="1">
+        <input type="text" name="q_ticket" value="{{ filtros.q_ticket }}" placeholder="Folio, código, laboratorio..." 
+           data-auto-submit="input"/>
       </div>
 
       <div class="campo">
@@ -296,7 +323,7 @@
       </div>
 
       <div class="filtros-acciones">
-        <a class="btn" href="{% url 'panel_admin' %}">Limpiar</a>
+        <a class="btn" href="{% url 'panel_admin' %}?seccion=tickets">Limpiar</a>
         <button class="btn primario" type="submit">Aplicar</button>
       </div>
     </form>
@@ -307,8 +334,7 @@
             <div>Folio</div>
             <div>Laboratorio</div>
             <div>Categoría</div>
-            <div>Activo</div>
-            <div>Descripción</div>
+            <div>Codigo</div>
             <div>Prioridad</div>
             <div>Estado</div>
             <div>Técnico</div>
@@ -321,8 +347,7 @@
               <div class="mono">{{ t.folio }}</div>
               <div>{{ t.laboratorio_nombre }}</div>
               <div>{{ t.categoria_nombre }}</div>
-              <div class="mono">{{ t.activo }}</div>
-              <div>{{ t.descripcion }}</div>
+              <div class="mono">{{ t.codigo }}</div>
 
               <div>
                 <span class="etiqueta {% if t.prioridad == 'ALTA' %}prio-alta{% elif t.prioridad == 'MEDIA' %}prio-media{% else %}prio-baja{% endif %}">
@@ -346,15 +371,42 @@
 
               <div class="mono">{{ t.actualizado_en }}</div>
 
-              <div class="acciones-fila">
-                <button type="button" class="mini">Ver</button>
+                <div class="acciones-fila">
+                  <button
+                    type="button"
+                    class="mini"
+                    onclick="abrirModalVerTicket(
+                      '{{ t.id }}',
+                      '{{ t.folio|escapejs }}',
+                      '{{ t.laboratorio_nombre|escapejs }}',
+                      '{{ t.categoria_nombre|escapejs }}',
+                      '{{ t.codigo|escapejs }}',
+                      '{{ t.prioridad|escapejs }}',
+                      '{{ t.estado|escapejs }}',
+                      '{{ t.tecnico|escapejs }}',
+                      '{{ t.creado_en|escapejs }}',
+                      '{{ t.actualizado_en|escapejs }}',
+                      '{{ t.descripcion|escapejs }}',
+                      '{{ t.evidencia_url|escapejs }}'
+                    )">
+                    Ver
+                  </button>
 
-                {% if t.tecnico == "Sin asignar" %}
-                  <button type="button" class="mini">Asignar</button>
-                {% else %}
-                  <button type="button" class="mini">Reasignar</button>
-                {% endif %}
-              </div>
+                  <button
+                    type="button"
+                    class="mini {% if t.tecnico != 'Sin asignar' %}verde{% endif %}"
+                    onclick="abrirModalAsignarTicket(
+                      '{{ t.id }}',
+                      '{{ t.folio|escapejs }}',
+                      '{{ t.tecnico_id|escapejs }}'
+                    )">
+                    {% if t.tecnico == "Sin asignar" %}
+                      Asignar
+                    {% else %}
+                      Reasignar
+                    {% endif %}
+                  </button>
+                </div>
             </div>
             {% empty %}
             <div class="fila">
@@ -365,8 +417,25 @@
             {% endfor %}
         </div>
       </div>
-    </section>
+      {% if tickets.paginator.num_pages > 1 %}
+      <div class="paginacion">
+        {% if tickets.has_previous %}
+          <a class="btn" href="?seccion=tickets&pagina_tickets={{ tickets.previous_page_number }}&q_ticket={{ filtros.q_ticket }}&lab_ticket={{ filtros.lab_ticket }}&cat_ticket={{ filtros.cat_ticket }}&estado_ticket={{ filtros.estado_ticket }}&prioridad_ticket={{ filtros.prioridad_ticket }}&tecnico_ticket={{ filtros.tecnico_ticket }}">Anterior</a>
+        {% endif %}
 
+        <span class="pagina-info">
+          Página {{ tickets.number }} de {{ tickets.paginator.num_pages }}
+        </span>
+
+        {% if tickets.has_next %}
+          <a class="btn" href="?seccion=tickets&pagina_tickets={{ tickets.next_page_number }}&q_ticket={{ filtros.q_ticket }}&lab_ticket={{ filtros.lab_ticket }}&cat_ticket={{ filtros.cat_ticket }}&estado_ticket={{ filtros.estado_ticket }}&prioridad_ticket={{ filtros.prioridad_ticket }}&tecnico_ticket={{ filtros.tecnico_ticket }}">Siguiente</a>
+        {% endif %}
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+     </main>
+ 
     <!-- FOOTER -->
     <footer class="pie">
       <span class="muted">Sistema de Tickets UTCJ · Panel Administrador</span>
@@ -375,11 +444,11 @@
   </div>
 
   <!-- MODAL: NUEVO USUARIO -->
-  <div class="modal-fondo" id="modal" onclick="cerrarModal(event)">
+  <div class="modal-fondo" id="modal-usuario" onclick="cerrarModalUsuario(event)">
     <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-encabezado">
         <h3>Nuevo usuario</h3>
-        <button type="button" class="cerrar-modal" onclick="cerrarModal()">✕</button>
+        <button type="button" class="cerrar-modal" onclick="cerrarModalUsuario()">✕</button>
       </div>
 
       <form class="modal-form" method="POST" action="{% url 'crear_usuario_admin' %}">
@@ -412,7 +481,7 @@
         </div>
 
         <div class="modal-acciones">
-          <button type="button" class="btn fantasma" onclick="cerrarModal()">Cancelar</button>
+          <button type="button" class="btn fantasma" onclick="cerrarModalUsuario()">Cancelar</button>
           <button type="submit" class="btn primario">Crear usuario</button>
         </div>
       </form>
@@ -498,31 +567,259 @@
   </div>
 </div>
 
+  <div class="modal-fondo" id="modal-ticket" onclick="cerrarModalTicket(event)">
+    <div class="modal modal-ticket" onclick="event.stopPropagation()">
+
+      <div class="modal-encabezado">
+        <h3>Nuevo ticket</h3>
+        <button type="button" class="cerrar-modal" onclick="cerrarModalTicket()">✕</button>
+      </div>
+
+      <form class="modal-form modal-form-ticket" method="POST" action="{% url 'crear_ticket' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="ticket-columna ticket-columna-principal">
+          <div class="campo-modal">
+            <label>Laboratorio</label>
+            <select name="laboratorio_id" required>
+              <option value="">Selecciona...</option>
+              {% for lab in laboratorios %}
+                <option value="{{ lab.id }}">{{ lab.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="campo-modal">
+            <label>Categoría</label>
+            <select name="categoria_id" required>
+              <option value="">Selecciona...</option>
+              {% for c in categorias %}
+                <option value="{{ c.id }}">{{ c.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="campo-modal">
+            <label>Código</label>
+            <input type="text" name="codigo" placeholder="Ej. PC-LAB2-07" required />
+          </div>
+
+          <div class="campo-modal">
+            <label>Prioridad</label>
+            <select name="prioridad" required>
+              <option value="BAJA">Baja</option>
+              <option value="MEDIA" selected>Media</option>
+              <option value="ALTA">Alta</option>
+            </select>
+          </div>
+
+          <div class="campo-modal">
+            <label>Descripción</label>
+            <textarea name="descripcion" rows="6" placeholder="Describe el problema..." required></textarea>
+          </div>
+        </div>
+
+        <div class="ticket-columna ticket-columna-evidencia">
+          <div class="panel-evidencia">
+            <div class="campo-modal">
+              <label>Evidencia (opcional)</label>
+
+              <input
+                type="file"
+                name="evidencia"
+                id="input-evidencia"
+                class="input-file-oculto"
+                accept="image/*,.pdf,.doc,.docx"
+              />
+
+              <label for="input-evidencia" class="subida-archivo">
+                <img src="{% static 'css/icon.png' %}" alt="Subir archivo" class="subida-archivo-icono">
+                <span class="subida-archivo-texto">Seleccionar archivo</span>
+              </label>
+
+              <div class="nombre-archivo" id="nombre-archivo">Ningún archivo seleccionado</div>
+
+              <small>Puedes adjuntar una imagen o archivo relacionado con el problema.</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-acciones modal-acciones-ticket">
+          <button type="button" class="btn fantasma" onclick="cerrarModalTicket()">Cancelar</button>
+          <button type="submit" class="btn primario">Crear ticket</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- Modal ver ticket -->
+    <div class="modal-fondo" id="modal-ver-ticket" onclick="cerrarModalVerTicket(event)">
+      <div class="modal modal-ticket modal-ticket-detalle" onclick="event.stopPropagation()">
+        <div class="modal-encabezado">
+          <h3>Detalle del ticket</h3>
+          <button type="button" class="cerrar-modal" onclick="cerrarModalVerTicket()">✕</button>
+        </div>
+
+        <div class="modal-form modal-form-ticket modal-form-detalle-ticket">
+          <div class="ticket-columna ticket-columna-principal">
+            <div class="campo-modal">
+              <label>Folio</label>
+              <input type="text" id="ver-folio" readonly>
+            </div>
+
+            <div class="campo-modal">
+              <label>Laboratorio</label>
+              <input type="text" id="ver-laboratorio" readonly>
+            </div>
+
+            <div class="campo-modal">
+              <label>Categoría</label>
+              <input type="text" id="ver-categoria" readonly>
+            </div>
+
+            <div class="campo-modal">
+              <label>Código</label>
+              <input type="text" id="ver-codigo" readonly>
+            </div>
+
+            <div class="campo-modal">
+              <label>Prioridad</label>
+              <input type="text" id="ver-prioridad" readonly>
+            </div>
+
+            <div class="campo-modal">
+              <label>Estado</label>
+              <input type="text" id="ver-estado" readonly>
+            </div>
+
+            <div class="campo-modal">
+              <label>Técnico asignado</label>
+              <input type="text" id="ver-tecnico" readonly>
+            </div>
+
+            <div class="campo-modal campo-grid-2">
+              <div>
+                <label>Creado en</label>
+                <input type="text" id="ver-creado" readonly>
+              </div>
+              <div>
+                <label>Última actualización</label>
+                <input type="text" id="ver-actualizado" readonly>
+              </div>
+            </div>
+
+            <div class="campo-modal">
+              <label>Descripción</label>
+              <textarea id="ver-descripcion" rows="7" readonly></textarea>
+            </div>
+          </div>
+
+          <div class="ticket-columna ticket-columna-evidencia ticket-columna-evidencia-detalle">
+            <div class="visor-evidencia">
+              <div class="visor-evidencia-encabezado">
+                <div>
+                  <span class="visor-evidencia-etiqueta">Evidencia</span>
+                  <h4>Vista previa</h4>
+                </div>
+              </div>
+
+              <div class="visor-evidencia-cuerpo" id="visor-evidencia-cuerpo">
+                <img id="ver-evidencia-img" src="" alt="Evidencia del ticket">
+
+                <div class="visor-evidencia-vacio" id="visor-evidencia-vacio">
+                  <img src="{% static 'img/icon.png' %}" alt="Sin evidencia" class="visor-evidencia-vacio-icono">
+                  <p>Este ticket no tiene evidencia adjunta.</p>
+                </div>
+              </div>
+
+              <div class="visor-evidencia-pie">
+                <a id="ver-evidencia-link" href="#" target="_blank" class="btn">Abrir archivo</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-acciones modal-acciones-ticket">
+            <button type="button" class="btn fantasma" onclick="cerrarModalVerTicket()">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Asignar Ticket  -->
+  <div class="modal-fondo" id="modal-asignar-ticket" onclick="cerrarModalAsignarTicket(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-encabezado">
+      <h3>Asignar ticket</h3>
+      <button type="button" class="cerrar-modal" onclick="cerrarModalAsignarTicket()">✕</button>
+    </div>
+
+    <form class="modal-form" method="POST" id="form-asignar-ticket">
+      {% csrf_token %}
+
+      <div class="campo-modal">
+        <label>Folio</label>
+        <input type="text" id="asignar-folio" readonly>
+      </div>
+
+      <div class="campo-modal">
+        <label>Técnico</label>
+        <select name="tecnico_id" id="asignar-tecnico" required>
+          <option value="">Selecciona un técnico</option>
+          {% for tec in tecnicos_filtro %}
+            <option value="{{ tec.id }}">{{ tec.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="modal-acciones">
+        <button type="button" class="btn fantasma" onclick="cerrarModalAsignarTicket()">Cancelar</button>
+        <button type="submit" class="btn primario">Guardar asignación</button>
+      </div>
+    </form>
+  </div>
+</div>
+
   <script>
-    function abrirModal() {
-      const m = document.getElementById('modal');
-      if (m) m.classList.add('visible');
-    }
+  function abrirModalUsuario() {
+    const m = document.getElementById('modal-usuario');
+    if (m) m.classList.add('visible');
+  }
 
-    function cerrarModal(e) {
-      const m = document.getElementById('modal');
-      if (!m) return;
-      if (!e || e.target === m) {
-        m.classList.remove('visible');
-      }
+  function cerrarModalUsuario(e) {
+    const m = document.getElementById('modal-usuario');
+    if (!m) return;
+    if (!e || e.target === m) {
+      m.classList.remove('visible');
     }
+  }
 
-    function generarPassword() {
-      const inp = document.getElementById('inp-pass');
-      if (!inp) return;
+  function abrirModalTicket() {
+    const m = document.getElementById('modal-ticket');
+    if (m) m.classList.add('visible');
+  }
 
-      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
-      let pass = '';
-      for (let i = 0; i < 10; i++) pass += chars[Math.floor(Math.random() * chars.length)];
-      inp.value = pass;
-      inp.type = 'text';
+  function cerrarModalTicket(e) {
+    const m = document.getElementById('modal-ticket');
+    if (!m) return;
+    if (!e || e.target === m) {
+      m.classList.remove('visible');
     }
-  </script>
+  }
+
+  function generarPassword() {
+    const inp = document.getElementById('inp-pass');
+    if (!inp) return;
+
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
+    let pass = '';
+    for (let i = 0; i < 10; i++) {
+      pass += chars[Math.floor(Math.random() * chars.length)];
+    }
+    inp.value = pass;
+    inp.type = 'text';
+  }
+</script>
   
   <script>
   function abrirModalEditar(id, nombre, identificador, rol) {
@@ -594,6 +891,91 @@
       });
     });
   });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const inputEvidencia = document.getElementById('input-evidencia');
+    const nombreArchivo = document.getElementById('nombre-archivo');
+
+    if (inputEvidencia && nombreArchivo) {
+      inputEvidencia.addEventListener('change', function () {
+        if (this.files && this.files.length > 0) {
+          nombreArchivo.textContent = this.files[0].name;
+        } else {
+          nombreArchivo.textContent = 'Ningún archivo seleccionado';
+        }
+      });
+    }
+  });
+</script>
+
+<script>
+  function abrirModalVerTicket(
+    id, folio, laboratorio, categoria, codigo,
+    prioridad, estado, tecnico, creadoEn,
+    actualizadoEn, descripcion, evidenciaUrl
+  ) {
+    const modal = document.getElementById('modal-ver-ticket');
+
+    document.getElementById('ver-folio').value = folio || '—';
+    document.getElementById('ver-laboratorio').value = laboratorio || '—';
+    document.getElementById('ver-categoria').value = categoria || '—';
+    document.getElementById('ver-codigo').value = codigo || '—';
+    document.getElementById('ver-prioridad').value = prioridad || '—';
+    document.getElementById('ver-estado').value = estado || '—';
+    document.getElementById('ver-tecnico').value = tecnico || 'Sin asignar';
+    document.getElementById('ver-creado').value = creadoEn || '—';
+    document.getElementById('ver-actualizado').value = actualizadoEn || '—';
+    document.getElementById('ver-descripcion').value = descripcion || '—';
+
+    const img = document.getElementById('ver-evidencia-img');
+    const link = document.getElementById('ver-evidencia-link');
+    const vacio = document.getElementById('visor-evidencia-vacio');
+
+    if (evidenciaUrl && evidenciaUrl.trim() !== '') {
+      img.src = evidenciaUrl;
+      img.style.display = 'block';
+      link.href = evidenciaUrl;
+      link.style.display = 'inline-flex';
+      vacio.style.display = 'none';
+    } else {
+      img.src = '';
+      img.style.display = 'none';
+      link.href = '#';
+      link.style.display = 'none';
+      vacio.style.display = 'flex';
+    }
+
+    modal.classList.add('visible');
+  }
+
+  function cerrarModalVerTicket(e) {
+    const modal = document.getElementById('modal-ver-ticket');
+    const img = document.getElementById('ver-evidencia-img');
+    const link = document.getElementById('ver-evidencia-link');
+    const vacio = document.getElementById('visor-evidencia-vacio');
+
+    if (!modal) return;
+
+    if (!e || e.target === modal) {
+      modal.classList.remove('visible');
+
+      if (img) {
+        img.src = '';
+        img.style.display = 'none';
+      }
+
+      if (link) {
+        link.href = '#';
+        link.style.display = 'none';
+      }
+
+      if (vacio) {
+        vacio.style.display = 'flex';
+      }
+    }
+  }
 </script>
 </body>
 </html>
