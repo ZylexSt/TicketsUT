@@ -7,11 +7,7 @@
 <a href="{% url 'usuario' %}" class="activo">Usuario</a>
 <a href="#" >Mis tickets</a>
 <a href="#" >Bitácora</a>
-<<<<<<< Updated upstream
 <a href="{% url 'logout' %}"> Cerrar sesión</a>
-=======
-<a href="{% url 'logout' %}">Cerrar sesión</a>
->>>>>>> Stashed changes
 {% endblock %}
 
 {% block titulo_panel %}Panel de Usuario{% endblock %}
@@ -88,6 +84,8 @@
 </div>
 </section>
 
+
+
 <!-- MODAL: NUEVO TICKET -->
 <div class="modal-fondo" id="modal" onclick="cerrarModal(event)">
 <div class="modal" onclick="event.stopPropagation()">
@@ -97,7 +95,7 @@
     <button type="button" class="cerrar-modal" onclick="cerrarModal()">✕</button>
     </div>
 
-    <form class="modal-form" method="POST" action="{% url 'crear_ticket_usuario' %}" enctype="multipart/form-data">
+    <form class="modal-form" method="POST" action="{% url 'crear_ticket' %}" enctype="multipart/form-data">
     {% csrf_token %}
 
     <div class="campo-modal">

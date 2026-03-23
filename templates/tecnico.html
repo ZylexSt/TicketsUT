@@ -12,10 +12,10 @@
 {% block descripcion_panel %}Atención, seguimiento y resolución de tickets.{% endblock %}
 
 {% block menu %}
-<a href="{% url 'tecnico' %}" class="activo">🛠 Técnico</a>
-<a href="#tickets">📋 Tickets</a>
-<a href="#bitacora">📝 Bitácora</a>
-<a href="#">⚙ Configuración</a>
+<a href="{% url 'tecnico' %}" class="activo"> Técnico</a>
+<a href="#tickets"> Tickets</a>
+<a href="#bitacora"> Bitácora</a>
+<a href="#"> Configuración</a>
 {% endblock %}
 
 {% block header_acciones %}
@@ -81,11 +81,11 @@
                 {% for cat in categorias %}
                 <option value="{{ cat.id }}" {% if request.GET.categoria == cat.id|stringformat:"s" %}selected{% endif %}>
                     {{ cat.nombre }}
-                </option>
+                                 </option>
                 {% endfor %}
             </select>
 
-            <select name="estado">
+                 <select name="estado">
                 <option value="">Todos los estados</option>
                 <option value="nuevo" {% if request.GET.estado == "nuevo" %}selected{% endif %}>Nuevo</option>
                 <option value="revision" {% if request.GET.estado == "revision" %}selected{% endif %}>En revisión</option>

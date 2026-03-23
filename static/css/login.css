@@ -25,7 +25,6 @@ body {
 /* ── PANEL IZQUIERDO ── */
 .panel-izquierdo {
   background: url(fondo.jpg) ;
-  background-position: center;
   border-right: 1px solid var(--borde);
   display: flex;
   justify-content: center;
