@@ -12,45 +12,45 @@
 {% block descripcion_panel %}Atención, seguimiento y resolución de tickets.{% endblock %}
 
 {% block menu %}
-<a href="{% url 'tecnico' %}" class="activo"> Técnico</a>
-<a href="#tickets"> Tickets</a>
-<a href="#bitacora"> Bitácora</a>
-<a href="#"> Configuración</a>
+<a href="{% url 'tecnico' %}" class="activo">Técnico</a>
+<a href="#tickets">Tickets</a>
 {% endblock %}
 
 {% block header_acciones %}
+{% if vista_activa %}
+<a class="btn fantasma" href="{% url 'tecnico' %}">Volver a todos los tickets</a>
+{% endif %}
 <a class="btn fantasma" href="{% url 'logout' %}">Cerrar sesión</a>
 {% endblock %}
 
-
-+{% block contenido %}
+{% block contenido %}
 <main class="contenido tecnico-view">
 
     <section class="resumen-cards">
-        <article class="card-resumen">
-            <span class="card-label">MIS TICKETS</span>
-            <h3>{{ tickets_asignados|default:"8" }}</h3>
-            <p>Asignados al técnico</p>
-        </article>
+    <a href="{% url 'tecnico' %}?vista=mis_tickets" class="card-resumen card-link {% if vista_activa == 'mis_tickets' %}card-activa{% endif %}">
+        <span class="card-label">MIS TICKETS</span>
+        <h3>{{ tickets_asignados|default:"0" }}</h3>
+        <p>Asignados al técnico</p>
+    </a>
 
-        <article class="card-resumen">
-            <span class="card-label">NUEVOS</span>
-            <h3>{{ tickets_nuevos|default:"5" }}</h3>
-            <p>Disponibles para tomar</p>
-        </article>
+    <a href="{% url 'tecnico' %}?vista=nuevos" class="card-resumen card-link {% if vista_activa == 'nuevos' %}card-activa{% endif %}">
+        <span class="card-label">NUEVOS</span>
+        <h3>{{ tickets_nuevos|default:"0" }}</h3>
+        <p>Disponibles para tomar</p>
+    </a>
 
-        <article class="card-resumen">
-            <span class="card-label">EN PROCESO</span>
-            <h3>{{ tickets_proceso|default:"3" }}</h3>
-            <p>Actualmente atendidos</p>
-        </article>
+    <a href="{% url 'tecnico' %}?vista=en_proceso" class="card-resumen card-link {% if vista_activa == 'en_proceso' %}card-activa{% endif %}">
+        <span class="card-label">EN PROCESO</span>
+        <h3>{{ tickets_proceso|default:"0" }}</h3>
+        <p>Actualmente atendidos</p>
+    </a>
 
-        <article class="card-resumen">
-            <span class="card-label">RESUELTOS HOY</span>
-            <h3>{{ tickets_resueltos_hoy|default:"2" }}</h3>
-            <p>Cerrados este día</p>
-        </article>
-    </section>
+    <a href="{% url 'tecnico' %}?vista=resueltos_hoy" class="card-resumen card-link {% if vista_activa == 'resueltos_hoy' %}card-activa{% endif %}">
+        <span class="card-label">RESUELTOS HOY</span>
+        <h3>{{ tickets_resueltos_hoy|default:"0" }}</h3>
+        <p>Cerrados este día</p>
+    </a>
+</section>
 
     <section class="panel-modulo" id="tickets">
         <div class="panel-header">
@@ -64,13 +64,13 @@
                 type="text"
                 name="q"
                 value="{{ request.GET.q }}"
-                placeholder="Buscar por folio, activo o descripción"
+                placeholder="Buscar por folio, código o descripción"
             >
 
             <select name="laboratorio">
                 <option value="">Todos los laboratorios</option>
                 {% for lab in laboratorios %}
-                <option value="{{ lab.id }}" {% if request.GET.laboratorio == lab.id|stringformat:"s" %}selected{% endif %}>
+                <option value="{{ lab.id }}" {% if request.GET.laboratorio == lab.id %}selected{% endif %}>
                     {{ lab.nombre }}
                 </option>
                 {% endfor %}
@@ -79,19 +79,19 @@
             <select name="categoria">
                 <option value="">Todas las categorías</option>
                 {% for cat in categorias %}
-                <option value="{{ cat.id }}" {% if request.GET.categoria == cat.id|stringformat:"s" %}selected{% endif %}>
+                <option value="{{ cat.id }}" {% if request.GET.categoria == cat.id %}selected{% endif %}>
                     {{ cat.nombre }}
-                                 </option>
+                </option>
                 {% endfor %}
             </select>
 
-                 <select name="estado">
+            <select name="estado">
                 <option value="">Todos los estados</option>
-                <option value="nuevo" {% if request.GET.estado == "nuevo" %}selected{% endif %}>Nuevo</option>
-                <option value="revision" {% if request.GET.estado == "revision" %}selected{% endif %}>En revisión</option>
-                <option value="proceso" {% if request.GET.estado == "proceso" %}selected{% endif %}>En proceso</option>
-                <option value="resuelto" {% if request.GET.estado == "resuelto" %}selected{% endif %}>Resuelto</option>
-                <option value="cerrado" {% if request.GET.estado == "cerrado" %}selected{% endif %}>Cerrado</option>
+                <option value="NUEVO" {% if request.GET.estado == "NUEVO" %}selected{% endif %}>Nuevo</option>
+                <option value="REVISION" {% if request.GET.estado == "REVISION" %}selected{% endif %}>En revisión</option>
+                <option value="PROCESO" {% if request.GET.estado == "PROCESO" %}selected{% endif %}>En proceso</option>
+                <option value="RESUELTO" {% if request.GET.estado == "RESUELTO" %}selected{% endif %}>Resuelto</option>
+                <option value="CERRADO" {% if request.GET.estado == "CERRADO" %}selected{% endif %}>Cerrado</option>
             </select>
 
             <div class="filtros-acciones">
@@ -107,7 +107,7 @@
                         <th>Folio</th>
                         <th>Laboratorio</th>
                         <th>Categoría</th>
-                        <th>Activo</th>
+                        <th>Código</th>
                         <th>Descripción</th>
                         <th>Prioridad</th>
                         <th>Estado</th>
@@ -120,15 +120,15 @@
                     {% for ticket in tickets %}
                     <tr>
                         <td>{{ ticket.folio }}</td>
-                        <td>{{ ticket.laboratorio.nombre }}</td>
-                        <td>{{ ticket.categoria.nombre }}</td>
-                        <td>{{ ticket.activo }}</td>
-                        <td>{{ ticket.descripcion|truncatechars:30 }}</td>
+                        <td>{{ ticket.laboratorio_nombre }}</td>
+                        <td>{{ ticket.categoria_nombre }}</td>
+                        <td>{{ ticket.codigo }}</td>
+                        <td>{{ ticket.descripcion|truncatechars:40 }}</td>
 
                         <td>
-                            {% if ticket.prioridad == "alta" %}
+                            {% if ticket.prioridad == "ALTA" %}
                                 <span class="pill prioridad alta">Alta</span>
-                            {% elif ticket.prioridad == "media" %}
+                            {% elif ticket.prioridad == "MEDIA" %}
                                 <span class="pill prioridad media">Media</span>
                             {% else %}
                                 <span class="pill prioridad baja">Baja</span>
@@ -136,40 +136,34 @@
                         </td>
 
                         <td>
-                            {% if ticket.estado == "nuevo" %}
+                            {% if ticket.estado == "NUEVO" %}
                                 <span class="pill estado nuevo">Nuevo</span>
-                            {% elif ticket.estado == "revision" %}
+                            {% elif ticket.estado == "REVISION" %}
                                 <span class="pill estado revision">En revisión</span>
-                            {% elif ticket.estado == "proceso" %}
+                            {% elif ticket.estado == "PROCESO" %}
                                 <span class="pill estado proceso">En proceso</span>
-                            {% elif ticket.estado == "resuelto" %}
+                            {% elif ticket.estado == "RESUELTO" %}
                                 <span class="pill estado resuelto">Resuelto</span>
                             {% else %}
                                 <span class="pill estado cerrado">Cerrado</span>
                             {% endif %}
                         </td>
 
-                        <td>
-                            {% if ticket.tecnico_asignado %}
-                                {{ ticket.tecnico_asignado.get_full_name|default:ticket.tecnico_asignado.username }}
-                            {% else %}
-                                <span class="texto-suave">Sin asignar</span>
-                            {% endif %}
-                        </td>
+                        <td>{{ ticket.tecnico }}</td>
 
-                        <td>{{ ticket.actualizado_en|date:"d-M H:i" }}</td>
+                        <td>{{ ticket.actualizado_en }}</td>
 
                         <td class="acciones-tabla">
                             <a href="{% url 'ticket_detalle_tecnico' ticket.id %}" class="btn-tabla">Ver</a>
 
-                            {% if not ticket.tecnico_asignado %}
+                            {% if not ticket.tecnico_id %}
                             <form method="post" action="{% url 'tomar_ticket' ticket.id %}" class="inline-form">
                                 {% csrf_token %}
                                 <button type="submit" class="btn-tabla btn-tomar">Tomar</button>
                             </form>
                             {% endif %}
 
-                            {% if ticket.tecnico_asignado == request.user %}
+                            {% if ticket.tecnico_id == request.session.usuario_id %}
                             <a href="{% url 'ticket_gestionar' ticket.id %}" class="btn-tabla">Gestionar</a>
                             {% endif %}
                         </td>
@@ -198,11 +192,11 @@
             </div>
             <div class="accion-box">
                 <h4>Cambiar estado</h4>
-                <p>Actualiza el flujo de atención: nuevo, revisión, proceso o resuelto.</p>
+                <p>Actualiza el flujo de atención del ticket.</p>
             </div>
             <div class="accion-box">
                 <h4>Actualizar prioridad</h4>
-                <p>Marca tickets como alta, media o baja según urgencia.</p>
+                <p>Marca la urgencia del ticket según el caso.</p>
             </div>
             <div class="accion-box">
                 <h4>Registrar nota</h4>

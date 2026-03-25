@@ -313,3 +313,205 @@
         width: 100%;
     }
 }
+
+
+
+.detalle-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 1rem;
+    padding: 1.25rem;
+    border-bottom: 1px solid #eef0f3;
+}
+
+.detalle-item {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    background: #fafafa;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: .95rem 1rem;
+}
+
+.detalle-label {
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #6b7280;
+    font-weight: 700;
+}
+
+.detalle-descripcion,
+.detalle-evidencias {
+    padding: 1.25rem;
+    border-top: 1px solid #eef0f3;
+}
+
+.detalle-descripcion p {
+    margin: .65rem 0 0;
+    color: #111827;
+    line-height: 1.6;
+}
+
+.lista-evidencias {
+    margin: .75rem 0 0;
+    padding-left: 1.1rem;
+}
+
+.lista-evidencias li {
+    margin-bottom: .5rem;
+}
+
+.lista-evidencias a {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.lista-evidencias a:hover {
+    text-decoration: underline;
+}
+
+.timeline {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.timeline-item {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #fafafa;
+    padding: 1rem;
+}
+
+.timeline-meta {
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+    color: #374151;
+}
+
+.timeline-meta span {
+    color: #6b7280;
+    font-size: .92rem;
+}
+
+.timeline-body {
+    color: #111827;
+}
+
+.timeline-body p {
+    margin: .45rem 0 0;
+    line-height: 1.55;
+}
+
+.timeline-estado {
+    font-size: .92rem;
+    color: #374151;
+}
+
+@media (max-width: 900px) {
+    .detalle-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .timeline-item {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+
+
+.form-gestion-ticket {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.form-campo {
+    display: flex;
+    flex-direction: column;
+    gap: .45rem;
+}
+
+.form-campo label {
+    font-size: .9rem;
+    font-weight: 700;
+    color: #374151;
+}
+
+.form-campo select,
+.form-campo textarea {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: .85rem .95rem;
+    font-size: .95rem;
+    color: #111827;
+    background: #fff;
+    outline: none;
+}
+
+.form-campo select:focus,
+.form-campo textarea:focus {
+    border-color: #111827;
+}
+
+.form-campo textarea {
+    resize: vertical;
+    min-height: 140px;
+    line-height: 1.5;
+}
+
+.form-acciones-ticket {
+    display: flex;
+    gap: .8rem;
+    flex-wrap: wrap;
+}
+
+.btn-cerrar-ticket {
+    background: #b91c1c;
+    color: #fff;
+    border: 1px solid #b91c1c;
+}
+
+.btn-cerrar-ticket:hover {
+    opacity: .95;
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+.card-link {
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.card-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    border-color: #d1d5db;
+}
+
+.card-activa {
+    border: 2px solid #111827;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}

@@ -9,7 +9,17 @@ urlpatterns = [
     path("usuario/", views.panel_usuario, name="usuario"),
     path("usuario/crear-ticket/", views.crear_ticket, name="crear_ticket"),
 
+    # ================= TECNICO =================
     path("tecnico/", views.panel_tecnico, name="tecnico"),
+
+    # RF-12 Tomar ticket
+    path("tecnico/ticket/<str:ticket_id>/tomar/", views.tomar_ticket, name="tomar_ticket"),
+
+    # RF-13-16 Gestión
+    path("tecnico/ticket/<str:ticket_id>/", views.ticket_detalle_tecnico, name="ticket_detalle_tecnico"),
+    path("tecnico/ticket/<str:ticket_id>/gestionar/", views.ticket_gestionar, name="ticket_gestionar"),
+
+
 
     path("administrador/", views.panel_admin, name="panel_admin"),
     path("administrador/usuarios/crear/", views.crear_usuario_admin, name="crear_usuario_admin"),

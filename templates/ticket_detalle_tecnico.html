@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block titulo %}Detalle del Ticket - Sistema Tickets UTCJ{% endblock %}
+{% block subtitulo_sidebar %}Panel Técnico{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/tecnico.css' %}">
+{% endblock %}
+
+{% block titulo_panel %}Detalle del Ticket{% endblock %}
+{% block descripcion_panel %}Consulta completa del ticket y su historial.{% endblock %}
+
+{% block menu %}
+<a href="{% url 'tecnico' %}" class="activo">Técnico</a>
+<a href="{% url 'tecnico' %}#tickets">Tickets</a>
+<a href="#historial">Bitácora</a>
+{% endblock %}
+
+{% block header_acciones %}
+<a class="btn fantasma" href="{% url 'tecnico' %}">Volver</a>
+<a class="btn fantasma" href="{% url 'logout' %}">Cerrar sesión</a>
+{% endblock %}
+
+{% block contenido %}
+<main class="contenido tecnico-view">
+
+    <section class="panel-modulo">
+        <div class="panel-header">
+            <div class="panel-header-titulo">
+                <h3>Información general</h3>
+            </div>
+        </div>
+
+        <div class="detalle-grid">
+            <div class="detalle-item">
+                <span class="detalle-label">Folio</span>
+                <strong>{{ ticket.folio }}</strong>
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Estado</span>
+                {% if ticket.estado == "NUEVO" %}
+                    <span class="pill estado nuevo">Nuevo</span>
+                {% elif ticket.estado == "REVISION" %}
+                    <span class="pill estado revision">En revisión</span>
+                {% elif ticket.estado == "PROCESO" %}
+                    <span class="pill estado proceso">En proceso</span>
+                {% elif ticket.estado == "RESUELTO" %}
+                    <span class="pill estado resuelto">Resuelto</span>
+                {% else %}
+                    <span class="pill estado cerrado">Cerrado</span>
+                {% endif %}
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Laboratorio</span>
+                <strong>{{ ticket.laboratorio_nombre }}</strong>
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Categoría</span>
+                <strong>{{ ticket.categoria_nombre }}</strong>
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Código</span>
+                <strong>{{ ticket.codigo }}</strong>
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Prioridad</span>
+                {% if ticket.prioridad == "ALTA" %}
+                    <span class="pill prioridad alta">Alta</span>
+                {% elif ticket.prioridad == "MEDIA" %}
+                    <span class="pill prioridad media">Media</span>
+                {% else %}
+                    <span class="pill prioridad baja">Baja</span>
+                {% endif %}
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Creado por</span>
+                <strong>{{ ticket.creado_por_nombre }}</strong>
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Técnico asignado</span>
+                <strong>{{ ticket.tecnico_nombre }}</strong>
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Creado el</span>
+                <strong>{{ ticket.creado_en_fmt }}</strong>
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Última actualización</span>
+                <strong>{{ ticket.actualizado_en_fmt }}</strong>
+            </div>
+        </div>
+
+        <div class="detalle-descripcion">
+            <span class="detalle-label">Descripción del problema</span>
+            <p>{{ ticket.descripcion }}</p>
+        </div>
+
+        {% if ticket.evidencias %}
+        <div class="detalle-evidencias">
+            <span class="detalle-label">Evidencias</span>
+            <ul class="lista-evidencias">
+                {% for evidencia in ticket.evidencias %}
+                    <li>
+                        {% if evidencia.url %}
+                            <a href="{{ evidencia.url }}" target="_blank">Ver evidencia {{ forloop.counter }}</a>
+                        {% else %}
+                            Evidencia {{ forloop.counter }}
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="panel-modulo" id="historial">
+        <div class="panel-header">
+            <div class="panel-header-titulo">
+                <h3>Bitácora / Historial</h3>
+            </div>
+        </div>
+
+        <div class="timeline">
+            {% for item in historial %}
+            <div class="timeline-item">
+                <div class="timeline-meta">
+                    <strong>{{ item.fecha }}</strong>
+                    <span>{{ item.autor }}</span>
+                </div>
+                <div class="timeline-body">
+                    {% if item.estado %}
+                        <div class="timeline-estado">
+                            Estado: <strong>{{ item.estado }}</strong>
+                        </div>
+                    {% endif %}
+                    <p>{{ item.nota }}</p>
+                </div>
+            </div>
+            {% empty %}
+            <div class="sin-registros">No hay historial registrado para este ticket.</div>
+            {% endfor %}
+        </div>
+    </section>
+
+</main>
+{% endblock %}

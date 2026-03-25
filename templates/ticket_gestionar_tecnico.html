@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block titulo %}Gestionar Ticket - Sistema Tickets UTCJ{% endblock %}
+{% block subtitulo_sidebar %}Panel Técnico{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/tecnico.css' %}">
+{% endblock %}
+
+{% block titulo_panel %}Gestionar Ticket{% endblock %}
+{% block descripcion_panel %}Actualiza estado, prioridad y registra avances.{% endblock %}
+
+{% block menu %}
+<a href="{% url 'tecnico' %}" class="activo">Técnico</a>
+<a href="{% url 'tecnico' %}#tickets">Tickets</a>
+<a href="#">Bitácora</a>
+{% endblock %}
+
+{% block header_acciones %}
+<a class="btn fantasma" href="{% url 'tecnico' %}">Volver a tickets</a>
+<a class="btn fantasma" href="{% url 'logout' %}">Cerrar sesión</a>
+{% endblock %}
+
+{% block contenido %}
+<main class="contenido tecnico-view">
+
+    <section class="panel-modulo">
+        <div class="panel-header">
+            <div class="panel-header-titulo">
+                <h3>Resumen del ticket</h3>
+            </div>
+        </div>
+
+        <div class="detalle-grid">
+            <div class="detalle-item">
+                <span class="detalle-label">Folio</span>
+                <strong>{{ ticket.folio }}</strong>
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Estado actual</span>
+                <strong>{{ ticket.estado }}</strong>
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Prioridad actual</span>
+                <strong>{{ ticket.prioridad }}</strong>
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Técnico asignado</span>
+                <strong>{{ ticket.tecnico_nombre }}</strong>
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Laboratorio</span>
+                <strong>{{ ticket.laboratorio_nombre }}</strong>
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Categoría</span>
+                <strong>{{ ticket.categoria_nombre }}</strong>
+            </div>
+
+            <div class="detalle-item">
+                <span class="detalle-label">Código</span>
+                <strong>{{ ticket.codigo }}</strong>
+            </div>
+        </div>
+
+        <div class="detalle-descripcion">
+            <span class="detalle-label">Descripción del problema</span>
+            <p>{{ ticket.descripcion }}</p>
+        </div>
+    </section>
+
+    <section class="panel-modulo">
+        <div class="panel-header">
+            <div class="panel-header-titulo">
+                <h3>Actualizar ticket</h3>
+            </div>
+        </div>
+
+        <form method="post" class="form-gestion-ticket">
+            {% csrf_token %}
+
+            <div class="form-grid">
+                <div class="form-campo">
+                    <label for="estado">Estado</label>
+                    <select name="estado" id="estado">
+                        {% for estado in estados %}
+                        <option value="{{ estado }}" {% if ticket.estado == estado %}selected{% endif %}>
+                            {{ estado }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-campo">
+                    <label for="prioridad">Prioridad</label>
+                    <select name="prioridad" id="prioridad">
+                        {% for prioridad in prioridades %}
+                        <option value="{{ prioridad }}" {% if ticket.prioridad == prioridad %}selected{% endif %}>
+                            {{ prioridad }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-campo">
+                <label for="nota">Nota de avance / solución</label>
+                <textarea
+                    name="nota"
+                    id="nota"
+                    rows="6"
+                    placeholder="Escribe aquí el avance, la solución aplicada o la nota final..."
+                ></textarea>
+            </div>
+
+            <div class="form-acciones-ticket">
+                <button type="submit" name="accion" value="guardar" class="btn negro">
+                    Guardar cambios
+                </button>
+
+                <button type="submit" name="accion" value="cerrar" class="btn btn-cerrar-ticket">
+                    Cerrar ticket
+                </button>
+            </div>
+        </form>
+    </section>
+
+</main>
+{% endblock %}

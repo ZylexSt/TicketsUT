@@ -739,9 +739,6 @@
             </div>
           </div>
 
-          <div class="modal-acciones modal-acciones-ticket">
-            <button type="button" class="btn fantasma" onclick="cerrarModalVerTicket()">Cerrar</button>
-          </div>
         </div>
       </div>
     </div>
@@ -964,6 +961,15 @@
 
   function cerrarModalAsignarTicket(e) {
     const modal = document.getElementById('modal-asignar-ticket');
+    if (!modal) return;
+
+    if (!e || e.target === modal) {
+      modal.classList.remove('visible');
+    }
+  }
+
+    function cerrarModalVerTicket(e) {
+    const modal = document.getElementById('modal-ver-ticket');
     if (!modal) return;
 
     if (!e || e.target === modal) {
