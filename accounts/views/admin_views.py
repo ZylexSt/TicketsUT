@@ -1,11 +1,16 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.core.paginator import Paginator
-
+from django.template.loader import render_to_string
+from django.http import HttpResponse, HttpResponseForbidden
 from django.urls import reverse
-from django.shortcuts import redirect
+
+from weasyprint import HTML
 
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -13,7 +18,8 @@ from bson.errors import InvalidId
 from ..mongo import obtener_bd
 from ..decoradores import requiere_roles
 from ..seguridad import crear_hash_contrasena
-
+from .reportes import (construir_reporte_admin, obtener_fecha_minima_reportes, asegurar_coleccion_reportes,)
+from .correos import enviar_correo_ticket_asignado, enviar_reporte_admin_por_correo
 
 
 
@@ -22,7 +28,7 @@ def panel_admin(request):
     bd = obtener_bd()
 
     seccion = request.GET.get("seccion", "usuarios").strip().lower()
-    if seccion not in ["usuarios", "tickets"]:
+    if seccion not in ["usuarios", "tickets", "reportes"]:
         seccion = "usuarios"
 
     # ---------------- USUARIOS ----------------
@@ -205,10 +211,93 @@ def panel_admin(request):
     paginador_tickets = Paginator(tickets, 10)
     tickets_page = paginador_tickets.get_page(pagina_tickets)
 
+    #Correo
+    correos_reportes = []
+    vistos = set()
+
+    for u in todos_usuarios_raw:
+        correo = (u.get("perfil", {}).get("correo") or "").strip().lower()
+        if not correo:
+            continue
+
+        if correo in vistos:
+            continue
+
+        if not u.get("estado", {}).get("activo", True):
+            continue
+
+        vistos.add(correo)
+
+        rol = u.get("rol", "USUARIO")
+        rol_label = {
+            "ADMIN": "Administrador",
+            "TECNICO": "Técnico",
+            "USUARIO": "Usuario",
+        }.get(rol, "Usuario")
+
+        correos_reportes.append({
+            "id": str(u["_id"]),
+            "nombre": u.get("perfil", {}).get("nombre", "Sin nombre"),
+            "correo": correo,
+            "rol": rol,
+            "rol_label": rol_label,
+        })
+
+    correos_reportes.sort(key=lambda x: (x["nombre"].lower(), x["correo"]))
+
+
+    #Reportes
+    fecha_inicio = request.GET.get("fecha_inicio", "").strip()
+    fecha_fin = request.GET.get("fecha_fin", "").strip()
+
+    fecha_min_reporte = obtener_fecha_minima_reportes().isoformat()
+    fecha_max_reporte = timezone.localdate().isoformat()
+
+    reporte = None
+    reportes_guardados = []
+
+    if seccion == "reportes":
+        asegurar_coleccion_reportes()
+
+        reportes_raw = list(
+            bd.reportes_generados.find({"tipo": "ADMIN"}).sort("generado_en", -1)
+        )
+
+        for r in reportes_raw:
+            generado_por_nombre = "Administrador"
+            generado_por = r.get("generado_por")
+
+            if generado_por:
+                usuario = bd.usuarios.find_one({"_id": generado_por})
+                if usuario:
+                    generado_por_nombre = usuario.get("perfil", {}).get("nombre", "Administrador")
+
+            generado_en = r.get("generado_en")
+
+            reportes_guardados.append({
+                "id": str(r["_id"]),
+                "fecha_inicio": r.get("fecha_inicio", "—"),
+                "fecha_fin": r.get("fecha_fin", "—"),
+                "resumen": r.get("resumen", {}),
+                "html_url": r.get("html_url", ""),
+                "pdf_url": r.get("pdf_url", ""),
+                "generado_por_nombre": generado_por_nombre,
+                "generado_en": generado_en.strftime("%d-%b %H:%M") if generado_en else "—",
+            })
+
+        if fecha_inicio or fecha_fin:
+            reporte = construir_reporte_admin(fecha_inicio, fecha_fin)
+
+
     context = {
         "usuarios": usuarios_page,
         "tickets": tickets_page,
         "seccion_activa": seccion,
+        "context_reporte": reporte,
+        "fecha_min_reporte": fecha_min_reporte,
+        "fecha_max_reporte": fecha_max_reporte,
+        "reportes_guardados": reportes_guardados,
+        "correos_reportes": correos_reportes,
         "kpis": {
             "usuarios_totales": total_usuarios,
             "tecnicos": total_tecnicos,
@@ -225,6 +314,8 @@ def panel_admin(request):
             "estado_ticket": estado_ticket,
             "prioridad_ticket": prioridad_ticket,
             "tecnico_ticket": tecnico_ticket,
+            "fecha_inicio": fecha_inicio,
+            "fecha_fin": fecha_fin,
         },
         "laboratorios_filtro": [
             {"id": str(x["_id"]), "nombre": x["nombre"]}
@@ -248,6 +339,8 @@ def panel_admin(request):
     context["categorias"] = categorias
 
     return render(request, "panel_admin.html", context)
+
+    
 
 
 @require_POST
@@ -433,128 +526,340 @@ def eliminar_usuario_admin(request, usuario_id):
 @require_POST
 @requiere_roles("ADMIN")
 def activar_usuario_admin(request, usuario_id):
-    bd = obtener_bd()
+        bd = obtener_bd()
 
-    try:
-        oid = ObjectId(usuario_id)
-    except InvalidId:
-        messages.error(request, "ID de usuario inválido.")
-        return redirect("panel_admin")
+        try:
+            oid = ObjectId(usuario_id)
+        except InvalidId:
+            messages.error(request, "ID de usuario inválido.")
+            return redirect("panel_admin")
 
-    usuario = bd.usuarios.find_one({"_id": oid})
-    if not usuario:
-        messages.error(request, "Usuario no encontrado.")
-        return redirect("panel_admin")
+        usuario = bd.usuarios.find_one({"_id": oid})
+        if not usuario:
+            messages.error(request, "Usuario no encontrado.")
+            return redirect("panel_admin")
 
-    bd.usuarios.update_one(
-        {"_id": oid},
-        {
-            "$set": {
-                "estado.activo": True,
-                "meta.actualizado_en": timezone.now(),
+        bd.usuarios.update_one(
+            {"_id": oid},
+            {
+                "$set": {
+                    "estado.activo": True,
+                    "meta.actualizado_en": timezone.now(),
+                }
             }
-        }
-    )
+        )
 
-    messages.success(request, "Usuario activado correctamente.")
-    return redirect("panel_admin")
+        messages.success(request, "Usuario activado correctamente.")
+        return redirect("panel_admin")
 
 @require_POST
 @requiere_roles("ADMIN")
 def desactivar_usuario_admin(request, usuario_id):
-    bd = obtener_bd()
+        bd = obtener_bd()
 
-    try:
-        oid = ObjectId(usuario_id)
-    except InvalidId:
-        messages.error(request, "ID de usuario inválido.")
-        return redirect("panel_admin")
+        try:
+            oid = ObjectId(usuario_id)
+        except InvalidId:
+            messages.error(request, "ID de usuario inválido.")
+            return redirect("panel_admin")
 
-    usuario = bd.usuarios.find_one({"_id": oid})
-    if not usuario:
-        messages.error(request, "Usuario no encontrado.")
-        return redirect("panel_admin")
+        usuario = bd.usuarios.find_one({"_id": oid})
+        if not usuario:
+            messages.error(request, "Usuario no encontrado.")
+            return redirect("panel_admin")
 
-    if request.session.get("usuario_id") == usuario_id:
-        messages.error(request, "No puedes desactivar tu propia cuenta.")
-        return redirect("panel_admin")
+        if request.session.get("usuario_id") == usuario_id:
+            messages.error(request, "No puedes desactivar tu propia cuenta.")
+            return redirect("panel_admin")
 
-    bd.usuarios.update_one(
-        {"_id": oid},
-        {
-            "$set": {
-                "estado.activo": False,
-                "meta.actualizado_en": timezone.now(),
+        bd.usuarios.update_one(
+            {"_id": oid},
+            {
+                "$set": {
+                    "estado.activo": False,
+                    "meta.actualizado_en": timezone.now(),
+                }
             }
-        }
-    )
+        )
 
-    messages.success(request, "Usuario desactivado correctamente.")
-    return redirect("panel_admin")
+        messages.success(request, "Usuario desactivado correctamente.")
+        return redirect("panel_admin")
 
 
 @require_POST
 @requiere_roles("ADMIN")
 def asignar_ticket_admin(request, ticket_id):
-    bd = obtener_bd()
+        bd = obtener_bd()
 
-    try:
-        ticket_oid = ObjectId(ticket_id)
-    except InvalidId:
-        messages.error(request, "ID de ticket inválido.")
-        return redirect(f"{reverse('panel_admin')}?seccion=tickets")
+        try:
+            ticket_oid = ObjectId(ticket_id)
+        except InvalidId:
+            messages.error(request, "ID de ticket inválido.")
+            return redirect(f"{reverse('panel_admin')}?seccion=tickets")
 
-    tecnico_id = request.POST.get("tecnico_id", "").strip()
+        tecnico_id = request.POST.get("tecnico_id", "").strip()
 
-    if not tecnico_id:
-        messages.error(request, "Debes seleccionar un técnico.")
-        return redirect(f"{reverse('panel_admin')}?seccion=tickets")
+        if not tecnico_id:
+            messages.error(request, "Debes seleccionar un técnico.")
+            return redirect(f"{reverse('panel_admin')}?seccion=tickets")
 
-    try:
-        tecnico_oid = ObjectId(tecnico_id)
-    except InvalidId:
-        messages.error(request, "ID de técnico inválido.")
-        return redirect(f"{reverse('panel_admin')}?seccion=tickets")
+        try:
+            tecnico_oid = ObjectId(tecnico_id)
+        except InvalidId:
+            messages.error(request, "ID de técnico inválido.")
+            return redirect(f"{reverse('panel_admin')}?seccion=tickets")
 
-    ticket = bd.tickets.find_one({"_id": ticket_oid})
-    if not ticket:
-        messages.error(request, "Ticket no encontrado.")
-        return redirect(f"{reverse('panel_admin')}?seccion=tickets")
+        ticket = bd.tickets.find_one({"_id": ticket_oid})
+        if not ticket:
+            messages.error(request, "Ticket no encontrado.")
+            return redirect(f"{reverse('panel_admin')}?seccion=tickets")
 
-    tecnico = bd.usuarios.find_one({
-        "_id": tecnico_oid,
-        "rol": "TECNICO",
-        "estado.activo": True
-    })
+        tecnico = bd.usuarios.find_one({
+            "_id": tecnico_oid,
+            "rol": "TECNICO",
+            "estado.activo": True
+        })
 
-    if not tecnico:
-        messages.error(request, "El técnico seleccionado no es válido.")
-        return redirect(f"{reverse('panel_admin')}?seccion=tickets")
+        if not tecnico:
+            messages.error(request, "El técnico seleccionado no es válido.")
+            return redirect(f"{reverse('panel_admin')}?seccion=tickets")
 
-    ahora = timezone.now()
+        ahora = timezone.now()
 
-    nuevo_estado = ticket.get("estado", "NUEVO")
-    if nuevo_estado == "NUEVO":
-        nuevo_estado = "REVISION"
+        nuevo_estado = ticket.get("estado", "NUEVO")
+        if nuevo_estado == "NUEVO":
+            nuevo_estado = "REVISION"
 
-    bd.tickets.update_one(
-        {"_id": ticket_oid},
-        {
-            "$set": {
-                "asignado_a": tecnico_oid,
-                "estado": nuevo_estado,
-                "meta.actualizado_en": ahora
-            },
-            "$push": {
-                "historial": {
+        bd.tickets.update_one(
+            {"_id": ticket_oid},
+            {
+                "$set": {
+                    "asignado_a": tecnico_oid,
                     "estado": nuevo_estado,
-                    "por": ObjectId(request.session.get("usuario_id")),
-                    "fecha": ahora,
-                    "nota": f"Ticket asignado a {tecnico.get('perfil', {}).get('nombre', 'Técnico')}"
+                    "meta.actualizado_en": ahora
+                },
+                "$push": {
+                    "historial": {
+                        "accion": "ASIGNADO",
+                        "estado": nuevo_estado,
+                        "por": ObjectId(request.session.get("usuario_id")),
+                        "fecha": ahora,
+                        "nota": f"Ticket asignado a {tecnico.get('perfil', {}).get('nombre', 'Técnico')}"
+                    }
                 }
             }
-        }
-    )
+        )
 
-    messages.success(request, "Ticket asignado correctamente.")
-    return redirect(f"{reverse('panel_admin')}?seccion=tickets")
+        admin_nombre = "Administrador"
+        admin_id = request.session.get("usuario_id")
+        if admin_id:
+            try:
+                admin = bd.usuarios.find_one({"_id": ObjectId(admin_id)})
+                if admin:
+                    admin_nombre = admin.get("perfil", {}).get("nombre", "Administrador")
+            except Exception:
+                pass
+
+        ticket_actualizado = {
+            **ticket,
+            "asignado_a": tecnico_oid,
+            "estado": nuevo_estado,
+        }
+
+        try:
+            enviado, error = enviar_correo_ticket_asignado(
+                tecnico=tecnico,
+                ticket=ticket_actualizado,
+                asignado_por=admin_nombre,
+            )
+        except Exception as e:
+            enviado = False
+            error = str(e)
+
+        if enviado:
+            messages.success(request, "Ticket asignado correctamente y correo enviado al técnico.")
+        else:
+            messages.warning(
+                request,
+                f"Ticket asignado correctamente, pero no se pudo enviar el correo. {error}"
+            )
+
+        return redirect(f"{reverse('panel_admin')}?seccion=tickets")
+
+#Enviar PDF
+
+@require_POST
+@requiere_roles("ADMIN")
+def enviar_reporte_guardado_admin(request, reporte_id):
+    bd = asegurar_coleccion_reportes()
+
+    try:
+        reporte_oid = ObjectId(reporte_id)
+    except InvalidId:
+        messages.error(request, "ID de reporte inválido.")
+        return redirect(f"{reverse('panel_admin')}?seccion=reportes")
+
+    reporte = bd.reportes_generados.find_one({
+        "_id": reporte_oid,
+        "tipo": "ADMIN"
+    })
+
+    if not reporte:
+        messages.error(request, "Reporte no encontrado.")
+        return redirect(f"{reverse('panel_admin')}?seccion=reportes")
+
+    destinatarios = []
+
+    destinatario_bd = request.POST.get("destinatario_bd", "").strip().lower()
+    correo_manual = request.POST.get("correo_manual", "").strip().lower()
+
+    if destinatario_bd:
+        destinatarios.append(destinatario_bd)
+
+    if correo_manual:
+        destinatarios.append(correo_manual)
+
+    destinatarios = list(dict.fromkeys(destinatarios))
+
+    if not destinatarios:
+        messages.error(request, "Debes seleccionar un destinatario o escribir un correo.")
+        return redirect(f"{reverse('panel_admin')}?seccion=reportes")
+
+    ruta_pdf_relativa = reporte.get("pdf_path", "")
+    ruta_pdf = Path(settings.MEDIA_ROOT) / ruta_pdf_relativa
+
+    generado_por_nombre = "Administrador"
+    usuario_id = request.session.get("usuario_id")
+    if usuario_id:
+        try:
+            usuario = bd.usuarios.find_one({"_id": ObjectId(usuario_id)})
+            if usuario:
+                generado_por_nombre = usuario.get("perfil", {}).get("nombre", "Administrador")
+        except Exception:
+            pass
+
+    try:
+        enviado, error = enviar_reporte_admin_por_correo(
+            destinatarios=destinatarios,
+            ruta_pdf=ruta_pdf,
+            reporte=reporte,
+            generado_por=generado_por_nombre,
+        )
+    except Exception as e:
+        enviado = False
+        error = str(e)
+
+    if enviado:
+        messages.success(request, "Reporte enviado por correo correctamente.")
+    else:
+        messages.error(request, f"No se pudo enviar el reporte. {error}")
+
+    return redirect(f"{reverse('panel_admin')}?seccion=reportes")
+
+    #reportes
+@requiere_roles("ADMIN")
+def reporte_admin_html(request):
+        contexto = construir_reporte_admin(
+            request.GET.get("fecha_inicio"),
+            request.GET.get("fecha_fin"),
+        )
+        return render(request, "reporte_admin.html", contexto)
+
+
+@requiere_roles("ADMIN")
+def reporte_admin_pdf(request):
+        contexto = construir_reporte_admin(
+            request.GET.get("fecha_inicio"),
+            request.GET.get("fecha_fin"),
+        )
+
+        html_string = render_to_string(
+            "reporte_admin.html",
+            contexto,
+            request=request
+        )
+
+        pdf = HTML(
+            string=html_string,
+            base_url=request.build_absolute_uri("/")
+        ).write_pdf()
+
+        response = HttpResponse(pdf, content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f'inline; filename="reporte_{contexto["fecha_inicio"]}_{contexto["fecha_fin"]}.pdf"'
+        )
+        return response
+
+
+
+@requiere_roles("ADMIN")
+def generar_reporte_admin_guardado(request):
+        if request.method != "POST":
+            return HttpResponseForbidden("Método no permitido")
+
+        fecha_inicio = request.POST.get("fecha_inicio", "").strip()
+        fecha_fin = request.POST.get("fecha_fin", "").strip()
+
+        if not fecha_inicio or not fecha_fin:
+            messages.error(request, "Debes seleccionar una fecha inicial y final.")
+            return redirect(f"{reverse('panel_admin')}?seccion=reportes")
+
+        # Asegura colección e índices
+        bd = asegurar_coleccion_reportes()
+
+        # Construye el reporte
+        contexto = construir_reporte_admin(fecha_inicio, fecha_fin)
+
+        ahora = timezone.localtime()
+        marca = ahora.strftime("%Y%m%d_%H%M%S")
+
+        # Carpeta donde se guardarán los archivos
+        carpeta_reportes = Path(settings.MEDIA_ROOT) / "reportes"
+        carpeta_reportes.mkdir(parents=True, exist_ok=True)
+
+        nombre_base = f"reporte_admin_{fecha_inicio}_{fecha_fin}_{marca}"
+        nombre_html = f"{nombre_base}.html"
+        nombre_pdf = f"{nombre_base}.pdf"
+
+        ruta_html = carpeta_reportes / nombre_html
+        ruta_pdf = carpeta_reportes / nombre_pdf
+
+        # Render del HTML
+        html_string = render_to_string(
+            "reporte_admin.html",
+            contexto,
+            request=request
+        )
+
+        # Guardar HTML
+        ruta_html.write_text(html_string, encoding="utf-8")
+
+        # Guardar PDF
+        HTML(
+            string=html_string,
+            base_url=request.build_absolute_uri("/")
+        ).write_pdf(str(ruta_pdf))
+
+        usuario_id = request.session.get("usuario_id")
+        usuario_oid = ObjectId(usuario_id) if usuario_id else None
+
+        # Guardar registro en Mongo
+        bd.reportes_generados.insert_one({
+            "tipo": "ADMIN",
+            "fecha_inicio": contexto["fecha_inicio"],
+            "fecha_fin": contexto["fecha_fin"],
+            "resumen": contexto["resumen"],
+            "html_path": f"reportes/{nombre_html}",
+            "pdf_path": f"reportes/{nombre_pdf}",
+            "html_url": f"{settings.MEDIA_URL}reportes/{nombre_html}",
+            "pdf_url": f"{settings.MEDIA_URL}reportes/{nombre_pdf}",
+            "generado_por": usuario_oid,
+            "generado_en": ahora,
+            "meta": {
+                "creado_en": ahora,
+                "actualizado_en": ahora,
+            }
+        })
+
+        messages.success(request, "Reporte generado y guardado correctamente.")
+        return redirect(f"{reverse('panel_admin')}?seccion=reportes")

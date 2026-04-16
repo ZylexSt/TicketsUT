@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte administrativo</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 1.5cm;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      color: #222;
+      font-size: 13px;
+    }
+
+    h1, h2 {
+      margin-bottom: 10px;
+    }
+
+    .meta {
+      margin-bottom: 20px;
+      color: #666;
+      gap: 12px;
+    }
+
+    .resumen {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .card .titulo {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    .card .valor {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      margin-bottom: 26px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    thead {
+      background: #f4f4f4;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+  <h1 class="">Reporte del Sistema de Tickets UTCJ</h1>
+  <div class="meta">
+    Periodo: {{ fecha_inicio }} al {{ fecha_fin }}<br>
+    Generado: {{ generado_en|date:"d/m/Y H:i" }}
+  </div>
+
+  <section class="resumen">
+    <div class="card">
+      <div class="titulo">Usuarios creados</div>
+      <div class="valor">{{ resumen.usuarios_creados }}</div>
+    </div>
+    <div class="card">
+      <div class="titulo">Accesos totales</div>
+      <div class="valor">{{ resumen.accesos_totales }}</div>
+    </div>
+    <div class="card">
+      <div class="titulo">Tickets creados</div>
+      <div class="valor">{{ resumen.tickets_creados }}</div>
+    </div>
+    <div class="card">
+      <div class="titulo">Tickets cerrados</div>
+      <div class="valor">{{ resumen.tickets_cerrados }}</div>
+    </div>
+  </section>
+
+  <h2>Usuarios</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Correo / matrícula</th>
+        <th>Accesos</th>
+        <th>Tickets creados</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in usuarios_reporte %}
+      <tr>
+        <td>{{ u.nombre }}</td>
+        <td>{{ u.identificador }}</td>
+        <td>{{ u.accesos }}</td>
+        <td>{{ u.tickets_creados }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4">Sin movimientos en este periodo.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Técnicos</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Correo / matrícula</th>
+        <th>Accesos</th>
+        <th>Tomados</th>
+        <th>Revisión</th>
+        <th>Proceso</th>
+        <th>Resueltos</th>
+        <th>Cerrados</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in tecnicos_reporte %}
+      <tr>
+        <td>{{ t.nombre }}</td>
+        <td>{{ t.identificador }}</td>
+        <td>{{ t.accesos }}</td>
+        <td>{{ t.tomados }}</td>
+        <td>{{ t.revision }}</td>
+        <td>{{ t.proceso }}</td>
+        <td>{{ t.resueltos }}</td>
+        <td>{{ t.cerrados }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8">Sin movimientos en este periodo.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

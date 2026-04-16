@@ -30,7 +30,13 @@
           class="{% if seccion_activa == 'tickets' %}activo{% endif %}">
           Todos los Tickets
         </a>
+      <a href="{% url 'panel_admin' %}?seccion=reportes"
+        class="{% if seccion_activa == 'reportes' %}activo{% endif %}">
+        Reportes
+      </a>
+
       </nav>
+
 
       <div class="sidebar-pie">
         <div class="caja-usuario">
@@ -434,6 +440,157 @@
       {% endif %}
     </section>
     {% endif %}
+
+    {% if seccion_activa == "reportes" %}
+    <section class="seccion-reportes">
+
+      <div class="bloque-reportes">
+        <h3 class="bloque-titulo">Generar reporte</h3>
+
+        <form method="POST" class="filtros filtros-reportes" action="{% url 'generar_reporte_admin_guardado' %}">
+          {% csrf_token %}
+          <input type="hidden" name="seccion" value="reportes">
+
+          <div class="campo">
+            <label for="fecha_inicio">Fecha inicio</label>
+            <input
+              id="fecha_inicio"
+              type="date"
+              name="fecha_inicio"
+              value="{{ filtros.fecha_inicio|default:fecha_min_reporte }}"
+              min="{{ fecha_min_reporte }}"
+              max="{{ fecha_max_reporte }}"
+              required
+            >
+          </div>
+
+          <div class="campo">
+            <label for="fecha_fin">Fecha fin</label>
+            <input
+              id="fecha_fin"
+              type="date"
+              name="fecha_fin"
+              value="{{ filtros.fecha_fin|default:fecha_max_reporte }}"
+              min="{{ fecha_min_reporte }}"
+              max="{{ fecha_max_reporte }}"
+              required
+            >
+          </div>
+
+          <div class="filtros-acciones">
+            <button class="btn primario" type="submit">Preparar</button>
+
+            {% if filtros.fecha_inicio and filtros.fecha_fin %}
+              <a
+                class="btn"
+                href="{% url 'reporte_admin_html' %}?fecha_inicio={{ filtros.fecha_inicio }}&fecha_fin={{ filtros.fecha_fin }}"
+                target="_blank"
+              >
+                Ver HTML
+              </a>
+
+              <a
+                class="btn verde"
+                href="{% url 'reporte_admin_pdf' %}?fecha_inicio={{ filtros.fecha_inicio }}&fecha_fin={{ filtros.fecha_fin }}"
+                target="_blank"
+              >
+                Ver PDF
+              </a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+
+      {% if context_reporte %}
+      <div class="bloque-reportes">
+        <h3 class="bloque-titulo">Vista previa del reporte</h3>
+
+        <div class="resumen-reportes">
+          <div class="card-resumen-reporte">
+            <span class="etiqueta">Usuarios creados</span>
+            <strong>{{ context_reporte.resumen.usuarios_creados|default:0 }}</strong>
+          </div>
+
+          <div class="card-resumen-reporte">
+            <span class="etiqueta">Accesos totales</span>
+            <strong>{{ context_reporte.resumen.accesos_totales|default:0 }}</strong>
+          </div>
+
+          <div class="card-resumen-reporte">
+            <span class="etiqueta">Tickets creados</span>
+            <strong>{{ context_reporte.resumen.tickets_creados|default:0 }}</strong>
+          </div>
+
+          <div class="card-resumen-reporte">
+            <span class="etiqueta">Tickets cerrados</span>
+            <strong>{{ context_reporte.resumen.tickets_cerrados|default:0 }}</strong>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="bloque-reportes">
+        <h3 class="bloque-titulo">Historial de reportes</h3>
+
+        <div class="tabla-wrap">
+          <div class="tabla historial-reportes-tabla">
+            <div class="fila encabezado-tabla">
+              <div>Reporte</div>
+              <div>Generado por</div>
+              <div>Fecha de generación</div>
+              <div>Resumen</div>
+              <div>Acciones</div>
+            </div>
+
+            {% for reporte in reportes_guardados %}
+            <div class="fila">
+              <div class="reporte-periodo">
+                <strong>{{ reporte.fecha_inicio }} al {{ reporte.fecha_fin }}</strong>
+              </div>
+
+              <div>{{ reporte.generado_por_nombre }}</div>
+
+              <div class="mono">{{ reporte.generado_en }}</div>
+
+              <div class="reporte-resumen">
+                <span>U: {{ reporte.resumen.usuarios_creados|default:0 }}</span>
+                <span>A: {{ reporte.resumen.accesos_totales|default:0 }}</span>
+                <span>T: {{ reporte.resumen.tickets_creados|default:0 }}</span>
+                <span>C: {{ reporte.resumen.tickets_cerrados|default:0 }}</span>
+              </div>
+
+              <div class="acciones-reporte-admin">
+                <div class="acciones-reporte-top">
+                  {% if reporte.html_url %}
+                    <a class="mini" href="{{ reporte.html_url }}" target="_blank">HTML</a>
+                  {% endif %}
+
+                  {% if reporte.pdf_url %}
+                    <a class="mini verde" href="{{ reporte.pdf_url }}" target="_blank">PDF</a>
+                  {% endif %}
+                </div>
+
+                  <button
+                    type="button"
+                    class="mini"
+                    onclick="abrirModalEnviarReporte('{{ reporte.id }}', '{{ reporte.fecha_inicio }}', '{{ reporte.fecha_fin }}')">
+                    Enviar
+                  </button>
+              </div>
+            </div>
+            {% empty %}
+            <div class="fila">
+              <div style="grid-column: 1 / -1;" class="muted">
+                Aún no hay reportes generados.
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </section>
+    {% endif %}
      </main>
  
     <!-- FOOTER -->
@@ -777,6 +934,55 @@
   </div>
 </div>
 
+  <!-- Modal Enviar reporte PDF -->
+      <div class="modal-fondo" id="modal-enviar-reporte" onclick="cerrarModalEnviarReporte(event)">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-encabezado">
+          <h3>Enviar reporte por correo</h3>
+          <button type="button" class="cerrar-modal" onclick="cerrarModalEnviarReporte()">✕</button>
+        </div>
+
+        <form class="modal-form" method="POST" id="form-enviar-reporte-modal">
+          {% csrf_token %}
+
+          <div class="campo-modal">
+            <label>Reporte</label>
+            <input type="text" id="enviar-reporte-periodo" readonly>
+          </div>
+
+          <div class="campo-modal">
+            <label>Seleccionar usuario o técnico</label>
+            <select name="destinatario_bd" id="enviar-reporte-select">
+              <option value="">Selecciona un destinatario</option>
+              {% for item in correos_reportes %}
+                <option value="{{ item.correo }}">
+                  {{ item.nombre }} — {{ item.rol_label }} — {{ item.correo }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="campo-modal">
+            <label>O escribir correo manual</label>
+            <input
+              type="email"
+              name="correo_manual"
+              id="enviar-reporte-correo-manual"
+              placeholder="correo@dominio.com"
+            >
+          </div>
+
+          <div class="modal-ayuda">
+            Puedes seleccionar un destinatario de la lista o escribir un correo manual.
+          </div>
+
+          <div class="modal-acciones">
+            <button type="button" class="btn fantasma" onclick="cerrarModalEnviarReporte()">Cancelar</button>
+            <button type="submit" class="btn primario">Enviar PDF</button>
+          </div>
+        </form>
+      </div>
+    </div>
   <script>
   function abrirModalUsuario() {
     const m = document.getElementById('modal-usuario');
@@ -970,6 +1176,32 @@
 
     function cerrarModalVerTicket(e) {
     const modal = document.getElementById('modal-ver-ticket');
+    if (!modal) return;
+
+    if (!e || e.target === modal) {
+      modal.classList.remove('visible');
+    }
+  }
+</script>
+
+<script>
+  function abrirModalEnviarReporte(reporteId, fechaInicio, fechaFin) {
+    const modal = document.getElementById('modal-enviar-reporte');
+    const form = document.getElementById('form-enviar-reporte-modal');
+    const periodo = document.getElementById('enviar-reporte-periodo');
+    const select = document.getElementById('enviar-reporte-select');
+    const correoManual = document.getElementById('enviar-reporte-correo-manual');
+
+    periodo.value = `${fechaInicio} al ${fechaFin}`;
+    select.value = '';
+    correoManual.value = '';
+    form.action = `/administrador/reportes/${reporteId}/enviar/`;
+
+    modal.classList.add('visible');
+  }
+
+  function cerrarModalEnviarReporte(e) {
+    const modal = document.getElementById('modal-enviar-reporte');
     if (!modal) return;
 
     if (!e || e.target === modal) {

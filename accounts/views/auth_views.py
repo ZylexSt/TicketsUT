@@ -6,6 +6,13 @@ from django.utils import timezone
 from ..mongo import obtener_bd
 from ..seguridad import verificar_contrasena
 
+
+def obtener_ip(request):
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
+
 def vista_login(request):
     # GET
     if request.method == "GET":
@@ -66,15 +73,26 @@ def vista_login(request):
         request.session.set_expiry(0)
 
     # Actualizar último acceso
+    ahora = timezone.now()
+
+
     bd.usuarios.update_one(
         {"_id": usuario["_id"]},
         {
             "$set": {
-                "autenticacion.ultimo_acceso": timezone.now(),
-                "meta.actualizado_en": timezone.now(),
+                "autenticacion.ultimo_acceso": ahora,
+                "meta.actualizado_en": ahora,
             }
         }
     )
+
+    bd.registros_acceso.insert_one({
+        "usuario_id": usuario["_id"],
+        "rol": usuario.get("rol", "USUARIO"),
+        "fecha": ahora,
+        "ip": obtener_ip(request),
+        "user_agent": request.META.get("HTTP_USER_AGENT", "")[:300],
+    })
 
     # Redirección por rol
     rol = request.session["rol"]
@@ -88,3 +106,5 @@ def vista_login(request):
 def vista_logout(request):
     request.session.flush()
     return redirect("login")
+
+

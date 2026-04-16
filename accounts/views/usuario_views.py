@@ -135,6 +135,7 @@ def crear_ticket(request):
             "estado": "NUEVO",
             "historial": [
                 {
+                    "acción": "CREADO",
                     "estado": "NUEVO",
                     "por": usuario_oid,
                     "fecha": timezone.now(),

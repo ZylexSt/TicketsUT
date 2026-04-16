@@ -132,3 +132,15 @@ MEDIA_ROOT = BASE_DIR / "media"
 SESSION_COOKIE_AGE = 1209600 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_SAVE_EVERY_REQUEST = True
+
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp-relay.brevo.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+
+EMAIL_HOST_USER = "a83cc6001@smtp-brevo.com"
+EMAIL_HOST_PASSWORD = "bskdrTwPYWZF6b2"
+
+DEFAULT_FROM_EMAIL = "noreply@ticketsutcj.site"

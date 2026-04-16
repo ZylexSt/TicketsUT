@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte administrativo</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 1.5cm;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      color: #222;
+      font-size: 13px;
+    }
+
+    h1, h2 {
+      margin-bottom: 10px;
+    }
+
+    .meta {
+      margin-bottom: 20px;
+      color: #666;
+      gap: 12px;
+    }
+
+    .resumen {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .card .titulo {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    .card .valor {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      margin-bottom: 26px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    thead {
+      background: #f4f4f4;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+  <h1 class="">Reporte del Sistema de Tickets UTCJ</h1>
+  <div class="meta">
+    Periodo: 2026-02-27 al 2026-04-15<br>
+    Generado: 15/04/2026 17:19
+  </div>
+
+  <section class="resumen">
+    <div class="card">
+      <div class="titulo">Usuarios creados</div>
+      <div class="valor">3</div>
+    </div>
+    <div class="card">
+      <div class="titulo">Accesos totales</div>
+      <div class="valor">4</div>
+    </div>
+    <div class="card">
+      <div class="titulo">Tickets creados</div>
+      <div class="valor">13</div>
+    </div>
+    <div class="card">
+      <div class="titulo">Tickets cerrados</div>
+      <div class="valor">2</div>
+    </div>
+  </section>
+
+  <h2>Usuarios</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Correo / matrícula</th>
+        <th>Accesos</th>
+        <th>Tickets creados</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+      <tr>
+        <td>Aaron</td>
+        <td>aaron@utcj.edu.mx</td>
+        <td>0</td>
+        <td>0</td>
+      </tr>
+      
+      <tr>
+        <td>Usuario Prueba</td>
+        <td>usuario@utcj.edu.mx</td>
+        <td>0</td>
+        <td>6</td>
+      </tr>
+      
+    </tbody>
+  </table>
+
+  <h2>Técnicos</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Correo / matrícula</th>
+        <th>Accesos</th>
+        <th>Tomados</th>
+        <th>Revisión</th>
+        <th>Proceso</th>
+        <th>Resueltos</th>
+        <th>Cerrados</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+      <tr>
+        <td>Martin</td>
+        <td>martin@utcj.edu.mx</td>
+        <td>0</td>
+        <td>2</td>
+        <td>0</td>
+        <td>4</td>
+        <td>9</td>
+        <td>1</td>
+      </tr>
+      
+      <tr>
+        <td>Soto</td>
+        <td>al23311636@utcj.edu.mx</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+      </tr>
+      
+      <tr>
+        <td>Tecnico Soporte</td>
+        <td>tecnico@utcj.edu.mx</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+        <td>1</td>
+      </tr>
+      
+    </tbody>
+  </table>
+</body>
+</html>

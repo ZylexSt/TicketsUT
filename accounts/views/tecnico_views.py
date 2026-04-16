@@ -8,6 +8,7 @@ from bson.errors import InvalidId
 
 from ..mongo import obtener_bd
 from ..decoradores import requiere_roles
+from .correos import enviar_correo_ticket_tomado
 
 
 @requiere_roles("TECNICO", "ADMIN")
@@ -248,6 +249,7 @@ def tomar_ticket(request, ticket_id):
             },
             "$push": {
                 "historial": {
+                    "accion": "TOMADO",
                     "estado": nuevo_estado,
                     "por": tecnico_oid,
                     "fecha": ahora,
@@ -257,7 +259,29 @@ def tomar_ticket(request, ticket_id):
         }
     )
 
-    messages.success(request, "Tomaste el ticket correctamente.")
+    ticket_actualizado = {
+        **ticket,
+        "asignado_a": tecnico_oid,
+        "estado": nuevo_estado,
+    }
+
+    try:
+        enviado, error = enviar_correo_ticket_tomado(
+            tecnico=tecnico,
+            ticket=ticket_actualizado,
+        )
+    except Exception as e:
+        enviado = False
+        error = str(e)
+
+    if enviado:
+        messages.success(request, "Tomaste el ticket correctamente y se envió el correo.")
+    else:
+        messages.warning(
+            request,
+            f"Tomaste el ticket correctamente, pero no se pudo enviar el correo. {error}"
+        )
+
     return redirect("tecnico")
 
 
@@ -433,6 +457,7 @@ def ticket_gestionar(request, ticket_id):
             cambios_set["estado"] = "CERRADO"
 
             historial_nuevos.append({
+                "accion": "CERRADO",
                 "estado": "CERRADO",
                 "por": usuario_oid,
                 "fecha": ahora,
@@ -454,6 +479,7 @@ def ticket_gestionar(request, ticket_id):
         if nuevo_estado in estados_validos and nuevo_estado != estado_actual:
             cambios_set["estado"] = nuevo_estado
             historial_nuevos.append({
+                "accion": "CAMBIO_eSTADO",
                 "estado": nuevo_estado,
                 "por": usuario_oid,
                 "fecha": ahora,
@@ -464,6 +490,7 @@ def ticket_gestionar(request, ticket_id):
         if nueva_prioridad in prioridades_validas and nueva_prioridad != prioridad_actual:
             cambios_set["prioridad"] = nueva_prioridad
             historial_nuevos.append({
+                "accion": "CAMBIO_PRIORIDAD",
                 "estado": cambios_set.get("estado", estado_actual),
                 "por": usuario_oid,
                 "fecha": ahora,
@@ -473,6 +500,7 @@ def ticket_gestionar(request, ticket_id):
         # Nota de avance
         if nota:
             historial_nuevos.append({
+                "accion": "NOTA",
                 "estado": cambios_set.get("estado", estado_actual),
                 "por": usuario_oid,
                 "fecha": ahora,

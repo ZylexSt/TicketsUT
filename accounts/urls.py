@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views import admin_views
 
 urlpatterns = [
     path("", views.vista_login, name="login"),
@@ -29,4 +30,15 @@ urlpatterns = [
     path("administrador/usuarios/<str:usuario_id>/desactivar/", views.desactivar_usuario_admin, name="desactivar_usuario_admin"),
     path("administrador/usuarios/<str:usuario_id>/eliminar/", views.eliminar_usuario_admin, name="eliminar_usuario_admin"),
     path("administrador/tickets/<str:ticket_id>/asignar/",views.asignar_ticket_admin, name="asignar_ticket_admin"),
+
+
+
+    path("administrador/reportes/html/", views.reporte_admin_html, name="reporte_admin_html"),
+    path("administrador/reportes/pdf/", views.reporte_admin_pdf, name="reporte_admin_pdf"),
+    path("administrador/reportes/generar/", views.generar_reporte_admin_guardado,name="generar_reporte_admin_guardado"),
+
+
+    path("administrador/reportes/<str:reporte_id>/enviar/",admin_views.enviar_reporte_guardado_admin, name="enviar_reporte_guardado_admin",),
 ]
+
+
