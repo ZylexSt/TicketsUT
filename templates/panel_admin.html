@@ -956,7 +956,7 @@
               <option value="">Selecciona un destinatario</option>
               {% for item in correos_reportes %}
                 <option value="{{ item.correo }}">
-                  {{ item.nombre }} — {{ item.rol_label }} — {{ item.correo }}
+                  {{ item.correo }}
                 </option>
               {% endfor %}
             </select>
